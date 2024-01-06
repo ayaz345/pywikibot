@@ -676,11 +676,10 @@ def DequePreloadingGenerator(generator: Iterable[pywikibot.page.Page],
         'generator must be a DequeGenerator object'
 
     while True:
-        page_count = min(len(generator), groupsize)
-        if not page_count:
+        if page_count := min(len(generator), groupsize):
+            yield from PreloadingGenerator(generator, page_count, quiet)
+        else:
             return
-
-        yield from PreloadingGenerator(generator, page_count, quiet)
 
 
 def PreloadingEntityGenerator(generator: Iterable[pywikibot.page.Page],

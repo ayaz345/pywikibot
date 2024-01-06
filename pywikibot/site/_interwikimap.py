@@ -77,8 +77,9 @@ class _InterwikiMap:
             return self._iw_sites[prefix]
         if isinstance(self._iw_sites[prefix].site, Exception):
             raise self._iw_sites[prefix].site
-        raise TypeError('_iw_sites[{}] is wrong type: {}'
-                        .format(prefix, type(self._iw_sites[prefix].site)))
+        raise TypeError(
+            f'_iw_sites[{prefix}] is wrong type: {type(self._iw_sites[prefix].site)}'
+        )
 
     def get_by_url(self, url: str) -> set[str]:
         """

@@ -78,7 +78,7 @@ class PywikibotCookieJar(cookiejar.LWPCookieJar):
 
         :param user: account name to be part of the cookie filename.
         """
-        _user = '-' + tools.as_filename(user) if user else ''
+        _user = f'-{tools.as_filename(user)}' if user else ''
         self.filename = config.datafilepath(f'pywikibot{_user}.lwp')
 
         try:
@@ -141,8 +141,8 @@ atexit.register(flush)
 
 USER_AGENT_PRODUCTS = {
     'python': 'Python/' + '.'.join(str(i) for i in sys.version_info),
-    'http_backend': 'requests/' + requests.__version__,
-    'pwb': 'Pywikibot/' + pywikibot.__version__,
+    'http_backend': f'requests/{requests.__version__}',
+    'pwb': f'Pywikibot/{pywikibot.__version__}',
 }
 
 
@@ -216,7 +216,7 @@ def user_agent(site: pywikibot.site.BaseSite | None = None,
         # is not the best for a HTTP header if the username isn't ASCII.
         if site.username():
             username = user_agent_username(site.username())
-            script_comments.append('User:' + username)
+            script_comments.append(f'User:{username}')
 
         values.update({
             'family': site.family.name,
@@ -298,7 +298,7 @@ def get_authentication(uri: str) -> tuple[str, str] | None:
                                      for i in range(len(netloc_parts))]
     for path in netlocs:
         if path in config.authenticate:
-            if len(config.authenticate[path]) in [2, 4]:
+            if len(config.authenticate[path]) in {2, 4}:
                 return config.authenticate[path]
             warn('config.authenticate["{path}"] has invalid value.\n'
                  'It should contain 2 or 4 items, not {length}.\n'
@@ -339,7 +339,7 @@ def error_handling_callback(response):
     if isinstance(response, Exception):
         with suppress(Exception):
             # request exception may contain response and request attribute
-            error('An error occurred for uri ' + response.request.url)
+            error(f'An error occurred for uri {response.request.url}')
         raise response from None
 
     if response.status_code == HTTPStatus.REQUEST_URI_TOO_LONG:
@@ -498,24 +498,22 @@ def _get_encoding_from_response_headers(
     if not content_type:
         return None
 
-    charset = get_charset_from_content_type(content_type)
-    if charset:
-        header_encoding = charset
+    if charset := get_charset_from_content_type(content_type):
+        return charset
     elif 'json' in content_type:
         # application/json | application/sparql-results+json
-        header_encoding = 'utf-8'
+        return 'utf-8'
     elif 'xml' in content_type:
         header = response.content[:100].splitlines()[0]  # bytes
-        m = re.search(
-            br'encoding=(["\'])(?P<encoding>.+?)\1', header)
-        if m:
-            header_encoding = m['encoding'].decode('utf-8')
-        else:
-            header_encoding = 'utf-8'
+        return (
+            m['encoding'].decode('utf-8')
+            if (
+                m := re.search(br'encoding=(["\'])(?P<encoding>.+?)\1', header)
+            )
+            else 'utf-8'
+        )
     else:
-        header_encoding = None
-
-    return header_encoding
+        return None
 
 
 def _decide_encoding(response: requests.Response,

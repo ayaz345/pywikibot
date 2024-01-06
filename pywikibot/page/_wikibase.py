@@ -138,8 +138,9 @@ class WikibaseEntity:
                 return getattr(self, name)
             return self.get()[name]
 
-        raise AttributeError("'{}' object has no attribute '{}'"
-                             .format(self.__class__.__name__, name))
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{name}'"
+        )
 
     def _initialize_empty(self):
         for key, cls in self.DATA_ATTRIBUTES.items():
@@ -195,10 +196,7 @@ class WikibaseEntity:
             attr = getattr(self, key, None)
             if attr is None:
                 continue
-            if diffto:
-                value = attr.toJSON(diffto=diffto.get(key))
-            else:
-                value = attr.toJSON()
+            value = attr.toJSON(diffto=diffto.get(key)) if diffto else attr.toJSON()
             if value:
                 data[key] = value
         return data
@@ -211,11 +209,11 @@ class WikibaseEntity:
         :param data: The dict to normalize
         :return: The dict with normalized data
         """
-        norm_data = {}
-        for key, attr in cls.DATA_ATTRIBUTES.items():
-            if key in data:
-                norm_data[key] = attr.normalizeData(data[key])
-        return norm_data
+        return {
+            key: attr.normalizeData(data[key])
+            for key, attr in cls.DATA_ATTRIBUTES.items()
+            if key in data
+        }
 
     @property
     def latest_revision_id(self) -> int | None:
@@ -404,7 +402,7 @@ class MediaInfo(WikibaseEntity):
             exc = NoPageError(self.file)
             raise NoWikibaseEntityError(self) from exc
 
-        self.id = 'M' + str(self.file.pageid)
+        self.id = f'M{str(self.file.pageid)}'
 
     def _defined_by(self, singular: bool = False) -> dict:
         """
@@ -472,7 +470,7 @@ class MediaInfo(WikibaseEntity):
                     raise NoWikibaseEntityError(self) from exc
                 except KeyError:
                     # reuse the reserved ID for better message
-                    self.id = 'M' + str(self.file.pageid)
+                    self.id = f'M{str(self.file.pageid)}'
                     raise NoWikibaseEntityError(self) from None
 
                 self._content = jsonlib.loads(data)
@@ -605,8 +603,7 @@ class WikibasePage(BasePage, WikibaseEntity):
                 elif site.property_namespace.id == ns:
                     self._namespace = site.property_namespace
                 else:
-                    raise ValueError(
-                        f'{site!r}: Namespace "{int(ns)}" is not valid')
+                    raise ValueError(f'{site!r}: Namespace "{ns}" is not valid')
 
         if 'entity_type' in kwargs:
             entity_type = kwargs.pop('entity_type')
@@ -619,9 +616,9 @@ class WikibasePage(BasePage, WikibaseEntity):
 
             if self._namespace:
                 if self._namespace != entity_type_ns:
-                    raise ValueError('Namespace "{}" is not valid for Wikibase'
-                                     ' entity type "{}"'
-                                     .format(int(kwargs['ns']), entity_type))
+                    raise ValueError(
+                        f"""Namespace "{int(kwargs['ns'])}" is not valid for Wikibase entity type "{entity_type}\""""
+                    )
             else:
                 self._namespace = entity_type_ns
                 kwargs['ns'] = self._namespace.id
@@ -636,8 +633,7 @@ class WikibasePage(BasePage, WikibaseEntity):
 
         if self._namespace:
             if self._link.namespace != self._namespace.id:
-                raise ValueError("'{}' is not in the namespace {}"
-                                 .format(title, self._namespace.id))
+                raise ValueError(f"'{title}' is not in the namespace {self._namespace.id}")
         else:
             # Neither ns or entity_type was provided.
             # Use the _link to determine entity type.
@@ -1151,9 +1147,9 @@ class ItemPage(WikibasePage):
         target = super().getRedirectTarget()
         cmodel = target.content_model
         if cmodel != 'wikibase-item':
-            raise Error('{} has redirect target {} with content model {} '
-                        'instead of wikibase-item'
-                        .format(self, target, cmodel))
+            raise Error(
+                f'{self} has redirect target {target} with content model {cmodel} instead of wikibase-item'
+            )
         return self.__class__(target.site, target.title(), target.namespace())
 
     def iterlinks(self, family=None):
@@ -1385,9 +1381,7 @@ class Property:
 
         :param numeric: Strip the first letter and return an int
         """
-        if numeric:
-            return int(self.id[1:])
-        return self.id
+        return int(self.id[1:]) if numeric else self.id
 
 
 class PropertyPage(WikibasePage, Property):
@@ -1601,10 +1595,7 @@ class Claim(Property):
         return f'{cls_name}({self.repo!r}, {self.id!r})'
 
     def __eq__(self, other):
-        if not isinstance(other, self.__class__):
-            return False
-
-        return self.same_as(other)
+        return False if not isinstance(other, self.__class__) else self.same_as(other)
 
     def __ne__(self, other):
         return not self.__eq__(other)
@@ -2029,10 +2020,7 @@ class Claim(Property):
         if (isinstance(self.target, pywikibot.Coordinate)
                 and isinstance(value, str)):
             coord_args = [float(x) for x in value.split(',')]
-            if len(coord_args) >= 3:
-                precision = coord_args[2]
-            else:
-                precision = 0.0001  # Default value (~10 m at equator)
+            precision = coord_args[2] if len(coord_args) >= 3 else 0.0001
             with suppress(TypeError):
                 if self.target.precision is not None:
                     precision = max(precision, self.target.precision)
@@ -2065,26 +2053,29 @@ class Claim(Property):
         """
         # todo: eventually unify the following two groups
         if self.type in ('wikibase-item', 'wikibase-property'):
-            value = {'entity-type': self.getTarget().entity_type,
-                     'numeric-id': self.getTarget().getID(numeric=True)}
+            return {
+                'entity-type': self.getTarget().entity_type,
+                'numeric-id': self.getTarget().getID(numeric=True),
+            }
         elif self.type in (
                 'wikibase-lexeme', 'wikibase-form', 'wikibase-sense'):
-            value = {'entity-type': self.getTarget().entity_type,
-                     'id': self.getTarget().getID()}
+            return {
+                'entity-type': self.getTarget().entity_type,
+                'id': self.getTarget().getID(),
+            }
         elif self.type in ('string', 'url', 'math', 'external-id',
                            'musical-notation'):
-            value = self.getTarget()
+            return self.getTarget()
         elif self.type == 'commonsMedia':
-            value = self.getTarget().title(with_ns=False)
+            return self.getTarget().title(with_ns=False)
         elif self.type in ('globe-coordinate', 'time',
                            'quantity', 'monolingualtext',
                            'geo-shape', 'tabular-data'):
-            value = self.getTarget().toWikibase()
+            return self.getTarget().toWikibase()
         else:  # WbUnknown
             pywikibot.warning(
                 f'{self.type} datatype is not supported yet.')
-            value = self.getTarget().toWikibase()
-        return value
+            return self.getTarget().toWikibase()
 
     def _formatDataValue(self) -> dict:
         """
@@ -2227,12 +2218,8 @@ class LexemePage(WikibasePage):
         """
         new_data = WikibasePage._normalizeData(data)
         for prop in ('language', 'lexicalCategory'):
-            value = new_data.get(prop)
-            if value:
-                if isinstance(value, ItemPage):
-                    new_data[prop] = value.getID()
-                else:
-                    new_data[prop] = value
+            if value := new_data.get(prop):
+                new_data[prop] = value.getID() if isinstance(value, ItemPage) else value
         return new_data
 
     @allow_asynchronous

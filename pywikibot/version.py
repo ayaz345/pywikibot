@@ -53,25 +53,25 @@ def getversion(online: bool = True) -> str:
 
     :param online: Include information obtained online
     """
-    branches = {
-        'master': 'branches/master',
-        'stable': 'branches/stable',
-    }
     data = getversiondict()
     data['cmp_ver'] = 'n/a'
     local_hsh = data.get('hsh', '')
     hsh = {}
 
     if online:
-        if not local_hsh:
-            data['cmp_ver'] = 'UNKNOWN'
-        else:
+        if local_hsh:
+            branches = {
+                'master': 'branches/master',
+                'stable': 'branches/stable',
+            }
             for branch, path in branches.items():
                 with suppress(Exception):
                     hsh[getversion_onlinerepo(path)] = branch
             if hsh:
                 data['cmp_ver'] = hsh.get(local_hsh, 'OUTDATED')
 
+        else:
+            data['cmp_ver'] = 'UNKNOWN'
     data['hsh'] = local_hsh[:7]  # make short hash from full hash
     return '{tag} ({hsh}, {rev}, {date}, {cmp_ver})'.format_map(data)
 
@@ -242,8 +242,7 @@ def getversion_git(path=None):
         # some Windows git versions provide git.cmd instead of git.exe
         cmd = 'git.cmd'
 
-    with open(os.path.join(_program_dir, '.git/config')) as f:
-        tag = f.read()
+    tag = pathlib.Path(os.path.join(_program_dir, '.git/config')).read_text()
     # Try 'origin' and then 'gerrit' as remote name; bail if can't find either.
     remote_pos = tag.find('[remote "origin"]')
     if remote_pos == -1:
@@ -272,9 +271,9 @@ def getversion_git(path=None):
                           stdout=subprocess.PIPE)
     rev, stderr = dp.communicate()
     rev = f'g{len(rev.splitlines())}'
-    hsh = info[3]  # also stored in '.git/refs/heads/master'
     if (not date or not tag or not rev) and not path:
         raise VersionParseError
+    hsh = info[3]  # also stored in '.git/refs/heads/master'
     return (tag, rev, date, hsh)
 
 
@@ -326,8 +325,9 @@ def getversion_onlinerepo(path: str = 'branches/master'):
     # Gerrit API responses include )]}' at the beginning,
     # make sure to strip it out
     buf = fetch(
-        'https://gerrit.wikimedia.org/r/projects/pywikibot%2Fcore/' + path,
-        headers={'user-agent': '{pwb}'}).text[4:]
+        f'https://gerrit.wikimedia.org/r/projects/pywikibot%2Fcore/{path}',
+        headers={'user-agent': '{pwb}'},
+    ).text[4:]
     try:
         return json.loads(buf)['revision']
     except Exception as e:
@@ -366,8 +366,7 @@ def get_module_mtime(module):
     :return: The modification time if it's a pywikibot module otherwise None.
     :rtype: datetime or None
     """
-    filename = get_module_filename(module)
-    if filename:
+    if filename := get_module_filename(module):
         return datetime.datetime.fromtimestamp(os.stat(filename).st_mtime)
     return None
 
@@ -393,9 +392,12 @@ def package_versions(
 
     root_packages = {key.split('.')[0] for key in modules}
 
-    builtin_packages = {name.split('.')[0] for name in root_packages
-                        if name in sys.builtin_module_names
-                        or '_' + name in sys.builtin_module_names}
+    builtin_packages = {
+        name.split('.')[0]
+        for name in root_packages
+        if name in sys.builtin_module_names
+        or f'_{name}' in sys.builtin_module_names
+    }
 
     # Improve performance by removing builtins from the list if possible.
     if builtins is False:
@@ -442,9 +444,9 @@ def package_versions(
                 path = _file
 
             info['path'] = path
-            assert path not in paths, \
-                   'Path {} of the package {} is in defined paths as {}' \
-                   .format(path, name, paths[path])
+            assert (
+                path not in paths
+            ), f'Path {path} of the package {name} is in defined paths as {paths[path]}'
             paths[path] = name
 
         if '__version__' in package.__dict__:

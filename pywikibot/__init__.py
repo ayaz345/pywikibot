@@ -122,8 +122,9 @@ def _code_fam_from_url(url: str, name: str | None = None
         matched_sites.append((family.code, family))
 
     if len(matched_sites) > 1:
-        warning('Found multiple matches for URL "{}": {} (use first)'
-                .format(url, ', '.join(str(s) for s in matched_sites)))
+        warning(
+            f"""Found multiple matches for URL "{url}": {', '.join(str(s) for s in matched_sites)} (use first)"""
+        )
     return matched_sites[0]
 
 
@@ -252,8 +253,11 @@ def Site(code: str | None = None,  # noqa: 134
         debug(f"Instantiated {interface.__name__} object '{_sites[key]}'")
 
         if _sites[key].code != code:
-            warn('Site {} instantiated using different code "{}"'
-                 .format(_sites[key], code), UserWarning, 2)
+            warn(
+                f'Site {_sites[key]} instantiated using different code "{code}"',
+                UserWarning,
+                2,
+            )
 
     return _sites[key]
 

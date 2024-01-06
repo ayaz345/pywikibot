@@ -126,10 +126,8 @@ class LoginManager:
         main_username = self.username
         if '@' in self.username:
             warn(
-                'When using BotPasswords it is recommended that you store '
-                'your login credentials in a password_file instead. See '
-                '{}/BotPasswords for instructions and more information.'
-                .format(__url__))
+                f'When using BotPasswords it is recommended that you store your login credentials in a password_file instead. See {__url__}/BotPasswords for instructions and more information.'
+            )
             main_username = self.username.partition('@')[0]
 
         try:
@@ -137,15 +135,17 @@ class LoginManager:
             user = next(data, {'name': None})
         except APIError as e:
             if e.code == 'readapidenied':
-                pywikibot.warning("Could not check user '{}' exists on {}"
-                                  .format(main_username, self.site))
+                pywikibot.warning(
+                    f"Could not check user '{main_username}' exists on {self.site}"
+                )
                 return
             raise
 
         if user['name'] != main_username:
             # Report the same error as server error code NotExists
-            raise NoUsernameError("Username '{}' does not exist on {}"
-                                  .format(main_username, self.site))
+            raise NoUsernameError(
+                f"Username '{main_username}' does not exist on {self.site}"
+            )
 
     def botAllowed(self) -> bool:
         """
@@ -377,7 +377,7 @@ class ClientLoginManager(LoginManager):
            2FA login was enabled.
         """
         if hasattr(self, '_waituntil') \
-           and datetime.datetime.now() < self._waituntil:
+               and datetime.datetime.now() < self._waituntil:
             diff = self._waituntil - datetime.datetime.now()
             pywikibot.warning(f'Too many tries, waiting {diff.seconds}'
                               ' seconds before retrying.')
@@ -445,15 +445,12 @@ class ClientLoginManager(LoginManager):
 
             if (status == 'Throttled' or status == self.keyword('fail')
                     and (login_throttled or 'wait' in fail_reason)):
-                wait = response.get('wait')
-                if wait:
+                if wait := response.get('wait'):
                     delta = datetime.timedelta(seconds=int(wait))
+                elif match := re.search(r'(\d+) (seconds|minutes)', fail_reason):
+                    delta = datetime.timedelta(**{match[2]: int(match[1])})
                 else:
-                    match = re.search(r'(\d+) (seconds|minutes)', fail_reason)
-                    if match:
-                        delta = datetime.timedelta(**{match[2]: int(match[1])})
-                    else:
-                        delta = datetime.timedelta()
+                    delta = datetime.timedelta()
                 self._waituntil = datetime.datetime.now() + delta
 
             break
@@ -561,18 +558,16 @@ class OauthLoginManager(LoginManager):
                 redirect, request_token = handshaker.initiate()
                 pywikibot.stdout('Authenticate via web browser..')
                 webbrowser.open(redirect)
-                pywikibot.stdout('If your web browser does not open '
-                                 'automatically, please point it to: {}'
-                                 .format(redirect))
+                pywikibot.stdout(
+                    f'If your web browser does not open automatically, please point it to: {redirect}'
+                )
                 request_qs = pywikibot.input('Response query string: ')
                 access_token = handshaker.complete(request_token, request_qs)
                 self._access_token = (access_token.key, access_token.secret)
                 return True
             except Exception as e:
                 pywikibot.error(e)
-                if retry:
-                    return self.login(retry=True, force=force)
-                return False
+                return self.login(retry=True, force=force) if retry else False
         else:
             pywikibot.info('Logged in to {site} via consumer {key}'
                            .format(key=self.consumer_token[0], site=self.site))
@@ -606,9 +601,9 @@ class OauthLoginManager(LoginManager):
         consumer_token = mwoauth.ConsumerToken(*self.consumer_token)
         access_token = mwoauth.AccessToken(*self.access_token)
         try:
-            identity = mwoauth.identify(self.site.base_url(self.site.path()),
-                                        consumer_token, access_token)
-            return identity
+            return mwoauth.identify(
+                self.site.base_url(self.site.path()), consumer_token, access_token
+            )
         except Exception as e:
             pywikibot.error(e)
             return None

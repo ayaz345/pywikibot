@@ -52,12 +52,12 @@ WMF_CACERT = 'MIIDxTCCAq2gAwIBAgIQAqxcJmoLQJuPC3nyrkYldzANBgkqhkiG9w0BAQUFADBs'
 
 def main(*args: str) -> None:
     """Print pywikibot version and important settings."""
-    pywikibot.info('Pywikibot: ' + getversion())
-    pywikibot.info('Release version: ' + pywikibot.__version__)
-    pywikibot.info('setuptools version: ' + setuptools.__version__)
-    pywikibot.info('mwparserfromhell version: ' + mwparserfromhell.__version__)
-    pywikibot.info('wikitextparser version: ' + wikitextparser.__version__)
-    pywikibot.info('requests version: ' + requests.__version__)
+    pywikibot.info(f'Pywikibot: {getversion()}')
+    pywikibot.info(f'Release version: {pywikibot.__version__}')
+    pywikibot.info(f'setuptools version: {setuptools.__version__}')
+    pywikibot.info(f'mwparserfromhell version: {mwparserfromhell.__version__}')
+    pywikibot.info(f'wikitextparser version: {wikitextparser.__version__}')
+    pywikibot.info(f'requests version: {requests.__version__}')
 
     has_wikimedia_cert = False
     if (not hasattr(requests, 'certs')
@@ -67,18 +67,19 @@ def main(*args: str) -> None:
     elif not os.path.isfile(requests.certs.where()):
         pywikibot.info(f'  cacerts: {requests.certs.where()} (missing)')
     else:
-        pywikibot.info('  cacerts: ' + requests.certs.where())
+        pywikibot.info(f'  cacerts: {requests.certs.where()}')
 
         with codecs.open(requests.certs.where(), 'r', 'utf-8') as cert_file:
             text = cert_file.read()
             if WMF_CACERT in text:
                 has_wikimedia_cert = True
-        pywikibot.info('    certificate test: {}'
-                       .format('ok' if has_wikimedia_cert else 'not ok'))
+        pywikibot.info(
+            f"    certificate test: {'ok' if has_wikimedia_cert else 'not ok'}"
+        )
     if not has_wikimedia_cert:
         pywikibot.info('  Please reinstall requests!')
 
-    pywikibot.info('Python: ' + sys.version)
+    pywikibot.info(f'Python: {sys.version}')
 
     # check environment settings
     settings = {key for key in os.environ if key.startswith('PYWIKIBOT')}
@@ -86,10 +87,10 @@ def main(*args: str) -> None:
                      'PYWIKIBOT_NO_USER_CONFIG'])
     for environ_name in sorted(settings):
         pywikibot.info(
-            '{}: {}'.format(environ_name,
-                            os.environ.get(environ_name, 'Not set') or "''"))
+            f"""{environ_name}: {os.environ.get(environ_name, 'Not set') or "''"}"""
+        )
 
-    pywikibot.info('Config base dir: ' + pywikibot.config.base_dir)
+    pywikibot.info(f'Config base dir: {pywikibot.config.base_dir}')
     for family, usernames in pywikibot.config.usernames.items():
         if not usernames:
             continue

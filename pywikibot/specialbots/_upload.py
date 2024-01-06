@@ -120,13 +120,13 @@ class UploadRobot(BaseBot):
 
     def read_file_content(self, file_url: str):
         """Return name of temp file in which remote file is saved."""
-        pywikibot.info('Reading file ' + file_url)
+        pywikibot.info(f'Reading file {file_url}')
 
         handle, tempname = tempfile.mkstemp()
         path = Path(tempname)
         size = 0
 
-        dt_gen = (el for el in (15, 30, 45, 60, 120, 180, 240, 300))
+        dt_gen = iter((15, 30, 45, 60, 120, 180, 240, 300))
         while True:
             file_len = path.stat().st_size
             if file_len:
@@ -202,7 +202,7 @@ class UploadRobot(BaseBot):
                                                    key=lambda w: w.code))
         if len(warnings) > 1:
             messages = '\n' + messages
-        pywikibot.info('We got the following warning(s): ' + messages)
+        pywikibot.info(f'We got the following warning(s): {messages}')
         answer = True
         for warning in warnings:
             this_answer = self._handle_warning(warning.code)
@@ -256,9 +256,7 @@ class UploadRobot(BaseBot):
 
             first_check = False
             ext = os.path.splitext(filename)[1].lower().strip('.')
-            # are any chars in forbidden also in filename?
-            invalid = set(forbidden) & set(filename)
-            if invalid:
+            if invalid := set(forbidden) & set(filename):
                 c = ''.join(invalid)
                 pywikibot.info(
                     f'Invalid character(s): {c}. Please try again')
@@ -266,8 +264,7 @@ class UploadRobot(BaseBot):
 
             if allowed_formats and ext not in allowed_formats:
                 if self.opt.always:
-                    pywikibot.info('File format is not one of [{}]'
-                                   .format(' '.join(allowed_formats)))
+                    pywikibot.info(f"File format is not one of [{' '.join(allowed_formats)}]")
                     continue
 
                 if not pywikibot.input_yn(
@@ -288,11 +285,10 @@ class UploadRobot(BaseBot):
                 if potential_file_page.has_permission():
                     if overwrite is None:
                         overwrite = not pywikibot.input_yn(
-                            'File with name {} already exists. '
-                            'Would you like to change the name? '
-                            '(Otherwise file will be overwritten.)'
-                            .format(filename), default=True,
-                            automatic_quit=False)
+                            f'File with name {filename} already exists. Would you like to change the name? (Otherwise file will be overwritten.)',
+                            default=True,
+                            automatic_quit=False,
+                        )
                     if not overwrite:
                         continue
                     break
@@ -433,16 +429,16 @@ class UploadRobot(BaseBot):
         # early check that upload is enabled
         if self.target_site.is_uploaddisabled():
             pywikibot.error(
-                'Upload error: Local file uploads are disabled on {}.'
-                .format(self.target_site))
+                f'Upload error: Local file uploads are disabled on {self.target_site}.'
+            )
             return True
 
         # early check that user has proper rights to upload
         self.target_site.login()
         if not self.target_site.has_right('upload'):
             pywikibot.error(
-                "User '{}' does not have upload rights on site {}."
-                .format(self.target_site.user(), self.target_site))
+                f"User '{self.target_site.user()}' does not have upload rights on site {self.target_site}."
+            )
             return True
 
         return False
@@ -461,7 +457,8 @@ class UploadRobot(BaseBot):
             if config.verbose_output:
                 raise
 
-            pywikibot.info('\nKeyboardInterrupt during {} bot run...'
-                           .format(self.__class__.__name__))
+            pywikibot.info(
+                f'\nKeyboardInterrupt during {self.__class__.__name__} bot run...'
+            )
         finally:
             self.exit()

@@ -100,15 +100,15 @@ class CoordImportRobot(ConfigParserBot, WikidataBot):
         """
         claims = item.get().get('claims')
         if self.prop in claims:
-            pywikibot.info('Item {} already contains coordinates ({})'
-                           .format(item.title(), self.prop))
+            pywikibot.info(
+                f'Item {item.title()} already contains coordinates ({self.prop})'
+            )
             return True
 
-        prop = self.has_coord_qualifier(claims)
-        if prop:
+        if prop := self.has_coord_qualifier(claims):
             pywikibot.info(
-                'Item {} already contains coordinates ({}) as qualifier for {}'
-                .format(item.title(), self.prop, prop))
+                f'Item {item.title()} already contains coordinates ({self.prop}) as qualifier for {prop}'
+            )
             return True
         return False
 
@@ -139,8 +139,7 @@ class CoordImportRobot(ConfigParserBot, WikidataBot):
 
         newclaim = pywikibot.Claim(self.repo, self.prop)
         newclaim.setTarget(coordinate)
-        source = self.getSource(page.site)
-        if source:
+        if source := self.getSource(page.site):
             newclaim.addSource(source)
         pywikibot.info(
             f'Adding {coordinate.lat}, {coordinate.lon} to {item.title()}')
@@ -169,16 +168,8 @@ def main(*args: str) -> None:
     # Process pagegenerators args
     local_args = generator_factory.handle_args(local_args)
 
-    create_new = False
-    for arg in local_args:
-        if arg == '-create':
-            create_new = True
-
-    # FIXME: this preloading preloads neither coordinates nor Wikibase items
-    # but preloads wikitext which we don't need
-    generator = generator_factory.getCombinedGenerator(preload=True)
-
-    if generator:
+    create_new = any(arg == '-create' for arg in local_args)
+    if generator := generator_factory.getCombinedGenerator(preload=True):
         coordbot = CoordImportRobot(generator=generator, create=create_new)
         coordbot.run()
     else:

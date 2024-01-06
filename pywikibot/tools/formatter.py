@@ -97,8 +97,7 @@ def color_format(text: str, *args, **kwargs) -> str:
         text = text.replace('{color}', f'<<{replace_color}>>')
     if '\03' in text:
         raise ValueError('\\03 pattern found in color format')
-    intersect = colors.intersection(kwargs)  # kwargs use colors
-    if intersect:
+    if intersect := colors.intersection(kwargs):
         raise ValueError('Keyword argument(s) use valid color(s): '
                          + '", "'.join(intersect))
     try:

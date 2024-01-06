@@ -109,8 +109,8 @@ class SetupBase(abc.ABC):
         """
         if self.local or self.remote or self.clear:
             self.clear_old_dist()
-            if self.clear:
-                return True  # pragma: no cover
+        if self.clear:
+            return True  # pragma: no cover
 
         if self.upgrade:  # pragma: no cover
             check_call('python -m pip install --upgrade pip', shell=True)

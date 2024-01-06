@@ -157,11 +157,7 @@ def get_site_and_lang(
             pywikibot.info('This is the list of known site codes:')
             pywikibot.info(', '.join(known_langs))
         if default_lang not in known_langs:
-            if default_lang != 'en' and 'en' in known_langs:
-                default_lang = 'en'
-            else:
-                default_lang = None
-
+            default_lang = 'en' if default_lang != 'en' and 'en' in known_langs else None
     message = "The site code of the site we're working on"
     mycode = None
     while not mycode:
@@ -377,23 +373,23 @@ def create_user_config(
 
     # For each different username entered, ask if user wants to save a
     # BotPassword (username, BotPassword name, BotPassword pass)
-    msg = fill('See {}/BotPasswords to know how to get codes.'
-               'Please note that plain text in {} and anyone with read '
-               'access to that directory will be able read the file.'
-               .format(__url__, _fncpass))
+    msg = fill(
+        f'See {__url__}/BotPasswords to know how to get codes.Please note that plain text in {_fncpass} and anyone with read access to that directory will be able read the file.'
+    )
     botpasswords = []
     userset = {user.name for user in userlist}
     for username in userset:
-        if pywikibot.input_yn('Do you want to add a BotPassword for {}?'
-                              .format(username), force=force, default=False):
+        if pywikibot.input_yn(
+            f'Do you want to add a BotPassword for {username}?',
+            force=force,
+            default=False,
+        ):
             if msg:
                 pywikibot.info(msg)
             msg = None
             message = f'BotPassword\'s "bot name" for {username}'
             botpasswordname = pywikibot.input(message, force=force)
-            message = 'BotPassword\'s "password" for "{}" ' \
-                      '(no characters will be shown)' \
-                      .format(botpasswordname)
+            message = f"""BotPassword\'s "password" for "{botpasswordname}" (no characters will be shown)"""
             botpasswordpass = pywikibot.input(message, force=force,
                                               password=True)
             if botpasswordname and botpasswordpass:
@@ -485,14 +481,15 @@ def ask_for_dir_change(force) -> tuple[bool, bool]:
         passfile = file_exists(os.path.join(base_dir, PASS_BASENAME))
         if force and not config.verbose_output or not (userfile or passfile):
             break
-        if pywikibot.input_yn(
-                'Would you like to change the directory?',
-                default=True, automatic_quit=False, force=force):
-            new_base = change_base_dir()
-            if new_base:
-                base_dir = new_base
-        else:
+        if not pywikibot.input_yn(
+            'Would you like to change the directory?',
+            default=True,
+            automatic_quit=False,
+            force=force,
+        ):
             break
+        if new_base := change_base_dir():
+            base_dir = new_base
     return userfile, passfile
 
 
@@ -510,11 +507,10 @@ def main(*args: str) -> None:
     # and 'force' mode can be activated below.
     config.family, config.mylang = 'wikipedia', None
 
-    local_args = pywikibot.handle_args(args)
-    if local_args:
-        pywikibot.info('Unknown argument{}: {}'
-                       .format('s' if len(local_args) > 1 else '',
-                               ', '.join(local_args)))
+    if local_args := pywikibot.handle_args(args):
+        pywikibot.info(
+            f"Unknown argument{'s' if len(local_args) > 1 else ''}: {', '.join(local_args)}"
+        )
         return
 
     pywikibot.info('You can abort at any time by pressing ctrl-c')

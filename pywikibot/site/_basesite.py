@@ -51,7 +51,7 @@ class BaseSite(ComparableMixin):
             # for this condition, showing the callers file and line no.
             pywikibot.log(f'BaseSite: code "{code}" converted to lowercase')
             code = code.lower()
-        if not all(x in pywikibot.family.CODE_CHARACTERS for x in code):
+        if any(x not in pywikibot.family.CODE_CHARACTERS for x in code):
             pywikibot.log(
                 f'BaseSite: code "{code}" contains invalid characters')
         self.__code = code
@@ -72,21 +72,22 @@ class BaseSite(ComparableMixin):
             else:
                 # no such language anymore
                 self.obsolete = True
-                pywikibot.log('Site {} instantiated and marked "obsolete" '
-                              'to prevent access'.format(self))
+                pywikibot.log(
+                    f'Site {self} instantiated and marked "obsolete" to prevent access'
+                )
         elif self.__code not in self.languages():
             if self.__family.name in self.__family.langs \
-               and len(self.__family.langs) == 1:
+                   and len(self.__family.langs) == 1:
                 self.__code = self.__family.name
                 if self.__family == pywikibot.config.family \
-                   and code == pywikibot.config.mylang:
+                       and code == pywikibot.config.mylang:
                     pywikibot.config.mylang = self.__code
-                    warn('Global configuration variable "mylang" changed to '
-                         '"{}" while instantiating site {}'
-                         .format(self.__code, self), UserWarning)
+                    warn(
+                        f'Global configuration variable "mylang" changed to "{self.__code}" while instantiating site {self}',
+                        UserWarning,
+                    )
             else:
-                error_msg = ("Language '{}' does not exist in family {}"
-                             .format(self.__code, self.__family.name))
+                error_msg = f"Language '{self.__code}' does not exist in family {self.__family.name}"
                 raise UnknownSiteError(error_msg)
 
         self._username = normalize_username(user)
@@ -146,21 +147,19 @@ class BaseSite(ComparableMixin):
             if self.code not in codes:
                 try:
                     doc = self.family.doc_subpages[self.code]
-                # Language not defined in doc_subpages in x_family.py file
-                # It will use default for the family.
-                # should it just raise an Exception and fail?
-                # this will help to check the dictionary ...
                 except KeyError:
-                    warn('Site {} has no language defined in '
-                         'doc_subpages dict in {}_family.py file'
-                         .format(self, self.family.name),
-                         FamilyMaintenanceWarning, 2)
-        # doc_subpages not defined in x_family.py file
+                    warn(
+                        f'Site {self} has no language defined in doc_subpages dict in {self.family.name}_family.py file',
+                        FamilyMaintenanceWarning,
+                        2,
+                    )
         except AttributeError:
             doc = ()  # default
-            warn('Site {} has no doc_subpages dict in {}_family.py file'
-                 .format(self, self.family.name),
-                 FamilyMaintenanceWarning, 2)
+            warn(
+                f'Site {self} has no doc_subpages dict in {self.family.name}_family.py file',
+                FamilyMaintenanceWarning,
+                2,
+            )
 
         return doc
 
@@ -186,9 +185,7 @@ class BaseSite(ComparableMixin):
 
     def user(self) -> str | None:
         """Return the currently-logged in bot username, or None."""
-        if self.logged_in():
-            return self.username()
-        return None
+        return self.username() if self.logged_in() else None
 
     def username(self) -> str | None:
         """Return the username used for the site."""
@@ -210,7 +207,7 @@ class BaseSite(ComparableMixin):
 
     def __str__(self) -> str:
         """Return string representing this Site's name and code."""
-        return self.family.name + ':' + self.code
+        return f'{self.family.name}:{self.code}'
 
     @property
     def sitename(self):
@@ -387,9 +384,7 @@ class BaseSite(ComparableMixin):
             ns, delim, name = title.partition(':')
             if delim:
                 ns = self.namespaces.lookup_name(ns)
-            if not delim or not ns:
-                return default_ns, title
-            return ns, name
+            return (default_ns, title) if not delim or not ns else (ns, name)
 
         # Replace alias characters like underscores with title
         # delimiters like spaces and multiple combinations of them with

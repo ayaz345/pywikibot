@@ -62,7 +62,7 @@ class User(Page):
         namespace prefix omitted, which is the username.
         """
         if self._isAutoblock:
-            return '#' + self.title(with_ns=False)
+            return f'#{self.title(with_ns=False)}'
         return self.title(with_ns=False)
 
     def isRegistered(self, force: bool = False) -> bool:  # noqa: N802
@@ -96,8 +96,7 @@ class User(Page):
         if not hasattr(self, '_userprops'):
             self._userprops = list(self.site.users([self.username, ]))[0]
             if self.isAnonymous():
-                r = list(self.site.blocks(iprange=self.username, total=1))
-                if r:
+                if r := list(self.site.blocks(iprange=self.username, total=1)):
                     self._userprops['blockedby'] = r[0]['by']
                     self._userprops['blockreason'] = r[0]['reason']
         return self._userprops
@@ -110,8 +109,7 @@ class User(Page):
         :param force: if True, forces reloading the data from API
         """
         if not self.isAnonymous():
-            reg = self.getprops(force).get('registration')
-            if reg:
+            if reg := self.getprops(force).get('registration'):
                 return pywikibot.Timestamp.fromISOformat(reg)
         return None
 
@@ -193,7 +191,7 @@ class User(Page):
         """
         return self.getprops(force).get('rights', [])
 
-    def getUserPage(self, subpage: str = '') -> Page:  # noqa: N802
+    def getUserPage(self, subpage: str = '') -> Page:    # noqa: N802
         """
         Return a Page object relative to this user's main page.
 
@@ -207,10 +205,10 @@ class User(Page):
             raise AutoblockUserError(
                 'This is an autoblock ID, you can only use to unblock it.')
         if subpage:
-            subpage = '/' + subpage
+            subpage = f'/{subpage}'
         return Page(Link(self.title() + subpage, self.site))
 
-    def getUserTalkPage(self, subpage: str = '') -> Page:  # noqa: N802
+    def getUserTalkPage(self, subpage: str = '') -> Page:    # noqa: N802
         """
         Return a Page object relative to this user's main talk page.
 
@@ -224,7 +222,7 @@ class User(Page):
             raise AutoblockUserError(
                 'This is an autoblock ID, you can only use to unblock it.')
         if subpage:
-            subpage = '/' + subpage
+            subpage = f'/{subpage}'
         return Page(Link(self.username + subpage,
                          self.site, default_namespace=3))
 
@@ -257,10 +255,7 @@ class User(Page):
         mailrequest = self.site.simple_request(**params)
         maildata = mailrequest.submit()
 
-        if 'emailuser' in maildata \
-           and maildata['emailuser']['result'] == 'Success':
-            return True
-        return False
+        return 'emailuser' in maildata and maildata['emailuser']['result'] == 'Success'
 
     def block(self, *args, **kwargs):
         """

@@ -203,11 +203,9 @@ class SandboxBot(Bot, ConfigParserBot):
         super().__init__(**kwargs)
         if self.opt.delay < 0:
             d = min(15, max(5, int(self.opt.hours * 60)))
-            self.delay_td = datetime.timedelta(minutes=d)
         else:
             d = max(5, self.opt.delay)
-            self.delay_td = datetime.timedelta(minutes=d)
-
+        self.delay_td = datetime.timedelta(minutes=d)
         self.site = pywikibot.Site()
         self.translated_content = self.opt.text or i18n.translate(
             self.site, content)
@@ -229,11 +227,12 @@ class SandboxBot(Bot, ConfigParserBot):
         """Run bot."""
         self.site.login()
         while True:
-            wait = False
             now = time.strftime('%d %b %Y %H:%M:%S (UTC)', time.gmtime())
+            wait = False
             for sandbox_page in self.generator:
-                pywikibot.info('Preparing to process sandbox page '
-                               + sandbox_page.title(as_link=True))
+                pywikibot.info(
+                    f'Preparing to process sandbox page {sandbox_page.title(as_link=True)}'
+                )
                 if sandbox_page.isRedirectPage():
                     pywikibot.warning(
                         '{} is a redirect page, cleaning it anyway'

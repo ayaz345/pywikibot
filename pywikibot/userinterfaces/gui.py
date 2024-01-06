@@ -195,8 +195,7 @@ class TextEditor(ScrolledText):
     def find_event(self, event=None) -> str:
         """Perform find operation."""
         if not self.tag_ranges('sel'):
-            found = self.tag_ranges('found')
-            if found:
+            if found := self.tag_ranges('found'):
                 self.tag_add('sel', found[0], found[1])
             else:
                 self.tag_add('sel', '1.0', '1.0+1c')
@@ -264,8 +263,7 @@ class TextEditor(ScrolledText):
                     idx = lastidx
                 # use a red foreground for all the tagged occurrences
                 self.tag_config('found', foreground='red')
-                found = self.tag_nextrange('found', 1.0)
-                if found:
+                if found := self.tag_nextrange('found', 1.0):
                     self.do_highlight(found[0], found[1])
         return None
 
@@ -431,9 +429,7 @@ class EditBoxWindow(Frame):
 
     def find(self) -> None:
         """Perform find operation."""
-        # get text to search for
-        s = self.textfield.get()
-        if s:
+        if s := self.textfield.get():
             self.editbox.find_all(s)
 
     def config_dialog(self, event=None) -> None:
@@ -468,9 +464,9 @@ class Tkdialog:
 
         self.root = tkinter.Tk()
         # "%dx%d%+d%+d" % (width, height, xoffset, yoffset)
-        self.root.geometry('{}x{}+10-10'
-                           .format(int(pywikibot.config.tkhorsize),
-                                   int(pywikibot.config.tkvertsize)))
+        self.root.geometry(
+            f'{int(pywikibot.config.tkhorsize)}x{int(pywikibot.config.tkvertsize)}+10-10'
+        )
 
         self.root.title(filename)
         self.photo_description = photo_description

@@ -81,7 +81,7 @@ class DataSite(APISite):
                     continue
 
                 content_model = namespace.defaultcontentmodel
-                if content_model == ('wikibase-' + entity_type):
+                if content_model == f'wikibase-{entity_type}':
                     self._entity_namespaces[entity_type] = namespace
                     break
 
@@ -166,17 +166,16 @@ class DataSite(APISite):
 
     def geo_shape_repository(self):
         """Return Site object for the geo-shapes repository e.g. commons."""
-        url = self.siteinfo['general'].get('wikibase-geoshapestoragebaseurl')
-        if url:
+        if url := self.siteinfo['general'].get('wikibase-geoshapestoragebaseurl'):
             return pywikibot.Site(url=url, user=self.username())
 
         return None
 
     def tabular_data_repository(self):
         """Return Site object for the tabular-datas repository e.g. commons."""
-        url = self.siteinfo['general'].get(
-            'wikibase-tabulardatastoragebaseurl')
-        if url:
+        if url := self.siteinfo['general'].get(
+            'wikibase-tabulardatastoragebaseurl'
+        ):
             return pywikibot.Site(url=url, user=self.username())
 
         return None
@@ -224,15 +223,14 @@ class DataSite(APISite):
                     ident = p._defined_by()
                     for key in ident:
                         req[key].append(ident[key])
-                else:
-                    if p.site == self and p.namespace() in (
+                elif p.site == self and p.namespace() in (
                             self._entity_namespaces.values()):
-                        req['ids'].append(p.title(with_ns=False))
-                    else:
-                        assert p.site.has_data_repository, \
+                    req['ids'].append(p.title(with_ns=False))
+                else:
+                    assert p.site.has_data_repository, \
                             'Site must have a data repository'
-                        req['sites'].append(p.site.dbName())
-                        req['titles'].append(p._link._text)
+                    req['sites'].append(p.site.dbName())
+                    req['titles'].append(p._link._text)
 
             req = self.simple_request(action='wbgetentities', **req)
             data = req.submit()
@@ -336,7 +334,7 @@ class DataSite(APISite):
         :param bot: Whether to mark the edit as a bot edit
         :param summary: Edit summary
         """
-        claim.snak = entity.getID() + '$' + str(uuid.uuid4())
+        claim.snak = f'{entity.getID()}${str(uuid.uuid4())}'
         params = {'action': 'wbsetclaim',
                   'claim': json.dumps(claim.toJSON()),
                   'baserevid': entity.latest_revision_id,
@@ -438,11 +436,7 @@ class DataSite(APISite):
                   'summary': summary, 'bot': bot, 'token': self.tokens['csrf']}
 
         # build up the snak
-        if isinstance(source, list):
-            sources = source
-        else:
-            sources = [source]
-
+        sources = source if isinstance(source, list) else [source]
         snak = {}
         for sourceclaim in sources:
             datavalue = sourceclaim._formatDataValue()
@@ -729,11 +723,13 @@ class DataSite(APISite):
             del kwargs['site']
 
         parameters = dict(search=search, language=language, **kwargs)
-        gen = self._generator(api.APIGenerator,
-                              type_arg='wbsearchentities',
-                              data_name='search',
-                              total=total, parameters=parameters)
-        return gen
+        return self._generator(
+            api.APIGenerator,
+            type_arg='wbsearchentities',
+            data_name='search',
+            total=total,
+            parameters=parameters,
+        )
 
     def parsevalue(self, datatype: str, values: list[str],
                    options: dict[str, Any] | None = None,
@@ -786,8 +782,7 @@ class DataSite(APISite):
         for result_hash in data['results']:
             if 'value' not in result_hash:
                 # There should be an APIError occurred already
-                raise RuntimeError("Unexpected missing 'value' in query data:"
-                                   '\n{}'.format(result_hash))
+                raise RuntimeError(f"Unexpected missing 'value' in query data:\n{result_hash}")
             results.append(result_hash['value'])
         return results
 
@@ -857,7 +852,7 @@ class DataSite(APISite):
                 assert ({'add', 'remove', 'set'} & keys)
                 assert ({'add', 'set'} >= keys)
                 assert ({'remove', 'set'} >= keys)
-            elif action in ('wbsetlabel', 'wbsetdescription'):
+            elif action in {'wbsetlabel', 'wbsetdescription'}:
                 res = data
                 keys = set(res)
                 assert keys == {'language', 'value'}
@@ -872,9 +867,12 @@ class DataSite(APISite):
             return res
 
         # Supported actions
-        assert action in ('wbsetaliases', 'wbsetdescription',
-                          'wbsetlabel', 'wbsetsitelink'), \
-            f'action {action} not supported.'
+        assert action in {
+            'wbsetaliases',
+            'wbsetdescription',
+            'wbsetlabel',
+            'wbsetsitelink',
+        }, f'action {action} not supported.'
 
         # prefer ID over (site, title)
         if isinstance(itemdef, str):

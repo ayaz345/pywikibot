@@ -95,13 +95,10 @@ class CategoryGraphBot(SingleSiteBot):
             self.to = cat_title.replace(' ', '_')
         self.rev = defaultdict(list)
         self.fw = defaultdict(list)
-        self.leaves = set()
         self.counter = 0
         font = 'fontname="Helvetica,Arial,sans-serif"'
-        style = f'graph [rankdir=LR ranksep=2 concentrate=true {font}] ' \
-                f'node [newrank=true shape=plaintext {font}] ' \
-                f'edge [arrowhead=open labeldistance=3 ' \
-                f'labelfontcolor="#00000080" {font}] ' + args.style
+        style = f'graph [rankdir=LR ranksep=2 concentrate=true {font}] node [newrank=true shape=plaintext {font}] edge [arrowhead=open labeldistance=3 labelfontcolor="#00000080" {font}] {args.style}'
+        self.leaves = set()
         self.dot = pydot.graph_from_dot_data(f'digraph {{{style}}}')[0]
         self.dot.set_name(f'"{cat_title}"')
 
@@ -128,22 +125,22 @@ class CategoryGraphBot(SingleSiteBot):
 
         def edge(n, h):
             minlen = n % columns + 1 if level != self.args.depth else 1
-            e = pydot.Edge(title,
-                           subcat.title(with_ns=False),
-                           tooltip=title + '  ⟶  '
-                           + subcat.title(with_ns=False),
-                           headlabel=title,
-                           # distribute the graph to depth
-                           minlen=minlen,
-                           penwidth=round(size / 2, 2),
-                           arrowsize=round(size / 4, 2),
-                           color=str(round(h, 2)) + ' 1 0.7',
-                           labelfontsize=int(3 * size),
-                           labelfontcolor=str(round(h, 2)) + ' 1 0.5')
+            e = pydot.Edge(
+                title,
+                subcat.title(with_ns=False),
+                tooltip=f'{title}  ⟶  {subcat.title(with_ns=False)}',
+                headlabel=title,
+                minlen=minlen,
+                penwidth=round(size / 2, 2),
+                arrowsize=round(size / 4, 2),
+                color=f'{str(round(h, 2))} 1 0.7',
+                labelfontsize=int(3 * size),
+                labelfontcolor=f'{str(round(h, 2))} 1 0.5',
+            )
             return e
 
         if config.verbose_output:
-            pywikibot.info('Adding ' + cat.title(with_ns=False))
+            pywikibot.info(f'Adding {cat.title(with_ns=False)}')
 
         node = node()
         self.dot.add_node(node)
@@ -177,7 +174,7 @@ class CategoryGraphBot(SingleSiteBot):
             for n in self.leaves:
                 while len(self.rev[n]) == 1:
                     if config.verbose_output:
-                        pywikibot.info('Removing ' + n)
+                        pywikibot.info(f'Removing {n}')
 
                     self.dot.del_edge(self.rev[n][0], n)
                     self.dot.del_node(n)
@@ -187,11 +184,11 @@ class CategoryGraphBot(SingleSiteBot):
                     n = self.rev[n][0]
 
         pywikibot.info('Saving results')
-        pywikibot.info(self.to + '.gv')
-        self.dot.write(self.to + '.gv', encoding='utf-8')
-        pywikibot.info(self.to + '.svg')
-        self.dot.write_svg(self.to + '.svg', encoding='utf-8')
-        pywikibot.info(self.to + '.html')
+        pywikibot.info(f'{self.to}.gv')
+        self.dot.write(f'{self.to}.gv', encoding='utf-8')
+        pywikibot.info(f'{self.to}.svg')
+        self.dot.write_svg(f'{self.to}.svg', encoding='utf-8')
+        pywikibot.info(f'{self.to}.html')
 
         header = ('<head><meta charset="UTF-8"/>'
                   '<title>' + self.cat.title(with_ns=False)
@@ -204,7 +201,7 @@ class CategoryGraphBot(SingleSiteBot):
                   'src="https://unpkg.com/panzoom@9.4.0/dist/panzoom.min.js" '
                   'query="#graph0" name="pz"></script>\n'
                   '<style> svg { height:100%; width:100%; } </style>\n')
-        with open(self.to + '.html', mode='wb') as o:
+        with open(f'{self.to}.html', mode='wb') as o:
             o.write(header.encode())
             o.write(self.dot.create('dot', 'svg', encoding='utf-8'))
 
@@ -233,7 +230,7 @@ def main(*args: str) -> None:
     file_path = args.to
     # If file exists, ask user if ok to overwrite. Otherwise, make
     # the file, including directories unless it is top level.
-    if glob.glob(file_path + '.*'):
+    if glob.glob(f'{file_path}.*'):
         choice = pywikibot.input_yn(f'Files exist for {file_path}. Overwrite?',
                                     'n', automatic_quit=False)
         if not choice:

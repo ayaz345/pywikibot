@@ -57,7 +57,7 @@ class Category(Page):
         key = sort_key or self.sortKey
         title_with_sort_key = self.title(with_section=False)
         if key is not None:
-            title_with_sort_key += '|' + key
+            title_with_sort_key += f'|{key}'
         return f'[[{title_with_sort_key}]]'
 
     def subcategories(self, *,

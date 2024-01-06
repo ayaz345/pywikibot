@@ -78,6 +78,4 @@ class Family(family.SubdomainFamily, family.WikimediaFamily):
         # Historic compatibility
         if code == 'pl':
             return 'utf-8', 'iso8859-2'
-        if code == 'ru':
-            return 'utf-8', 'iso8859-5'
-        return super().encodings(code)
+        return ('utf-8', 'iso8859-5') if code == 'ru' else super().encodings(code)

@@ -488,7 +488,7 @@ class CheckImagesBot:
             raise TranslationError(
                 'No report page provided in "REPORT_PAGE" dict '
                 'for your project!')
-        self.image_namespace = site.namespaces.FILE.custom_name + ':'
+        self.image_namespace = f'{site.namespaces.FILE.custom_name}:'
         self.list_entry = f'\n* [[:{self.image_namespace}%s]] '
 
         # The summary of the report
@@ -588,9 +588,7 @@ class CheckImagesBot:
     def upload_bot_change_function(report_page_text, upload_bot_array) -> str:
         """Detect the user that has uploaded the file through upload bot."""
         regex = upload_bot_array[1]
-        result = re.search(regex, report_page_text)
-
-        if result:
+        if result := re.search(regex, report_page_text):
             return result.group()
 
         # we can't find the user, report the problem to the bot
@@ -605,7 +603,7 @@ class CheckImagesBot:
         try:
             report_page_text = report_page_object.get()
         except NoPageError:
-            pywikibot.info(self.image_name + ' has been deleted...')
+            pywikibot.info(f'{self.image_name} has been deleted...')
             return False
 
         # You can use this function also to find only the user that
@@ -630,7 +628,7 @@ class CheckImagesBot:
         except PageRelatedError:
             pywikibot.info(f'Seems that {self.image_to_report} has only the '
                            f'description and not the file...')
-            repme = self.list_entry + "problems '''with the APIs'''"
+            repme = f"{self.list_entry}problems '''with the APIs'''"
             self.report_image(self.image_to_report, self.rep_page, self.com,
                               repme)
             return False
@@ -662,17 +660,15 @@ class CheckImagesBot:
         else:
             self.notification2 = self.notification
 
-        second_text = False
         curr_text = None
+        second_text = False
         # Getting the talk page's history, to check if there is another
         # advise...
         try:
             curr_text = self.talk_page.get()
             history = list(self.talk_page.revisions(total=10))
             latest_user = history[0]['user']
-            pywikibot.info(
-                'The latest user that has written something is: '
-                + latest_user)
+            pywikibot.info(f'The latest user that has written something is: {latest_user}')
             # A block to prevent the second message if the bot also
             # welcomed users...
             if latest_user in self.bots and len(history) > 1:
@@ -785,8 +781,7 @@ class CheckImagesBot:
         curr_images = []
         for values in zip_longest(*iterables, fillvalue=False):
             curr_images = values
-            # bool(FilePage) is True because it is an object subclass
-            if sum(bool(image) for image in values) <= 1:
+            if sum(bool(image) for image in curr_images) <= 1:
                 break
 
         for inx, image in enumerate(curr_images):
@@ -806,9 +801,9 @@ class CheckImagesBot:
             return False  # Image deleted, no hash found. Skip the image.
 
         site = pywikibot.Site('commons')
-        commons_image_with_this_hash = next(
-            site.allimages(sha1=hash_found, total=1), None)
-        if commons_image_with_this_hash:
+        if commons_image_with_this_hash := next(
+            site.allimages(sha1=hash_found, total=1), None
+        ):
             service_template = pywikibot.translate(self.site,
                                                    SERVICE_TEMPLATES)
             templates_in_the_image = self.image.templates()
@@ -820,7 +815,7 @@ class CheckImagesBot:
                                        f"it's a service image.")
                         return True  # continue with the check-part
 
-            pywikibot.info(self.image_name + ' is on commons!')
+            pywikibot.info(f'{self.image_name} is on commons!')
             if self.image.file_is_shared():
                 pywikibot.info(
                     "But, the file doesn't exist on your project! Skip...")
@@ -838,10 +833,13 @@ class CheckImagesBot:
             # It's not only on commons but the image needs a check
             # the second usually is a url or something like that.
             # Compare the two in equal way, both url.
-            repme = ((self.list_entry
-                      + "is also on '''Commons''': [[commons:File:%s]]")
-                     % (self.image_name,
-                        commons_image_with_this_hash.title(with_ns=False)))
+            repme = (
+                f"{self.list_entry}is also on '''Commons''': [[commons:File:%s]]"
+                % (
+                    self.image_name,
+                    commons_image_with_this_hash.title(with_ns=False),
+                )
+            )
             if (self.image.title(as_url=True)
                     == commons_image_with_this_hash.title(as_url=True)):
                 repme += ' (same name)'
@@ -910,8 +908,9 @@ class CheckImagesBot:
                 except NoPageError:
                     continue
 
-                if not (re.findall(dup_regex, dup_page_text)
-                        or re.findall(dup_regex, older_page_text)):
+                if not re.findall(dup_regex, dup_page_text) and not re.findall(
+                    dup_regex, older_page_text
+                ):
                     pywikibot.info(
                         f'{dup_page} is a duplicate and has to be tagged...')
                     images_to_tag_list.append(dup_page.title())
@@ -961,15 +960,14 @@ class CheckImagesBot:
                 fp = pywikibot.FilePage(self.site, images_to_tag_list[-1])
                 already_reported_in_past = fp.revision_count(self.bots)
                 image_title = re.escape(self.image.title(as_url=True))
-                from_regex = (r'\n\*\[\[:{}{}\]\]'
-                              .format(self.image_namespace, image_title))
+                from_regex = f'\n\*\[\[:{self.image_namespace}{image_title}\]\]'
                 # Delete the image in the list where we're write on
                 text_for_the_report = re.sub(from_regex, '',
                                              text_for_the_report)
                 # if you want only one edit, the edit found should be more
                 # than 0 -> num - 1
                 if already_reported_in_past > duplicates_rollback - 1 \
-                   or not dup_talk_text:
+                       or not dup_talk_text:
                     only_report = True
                 else:
                     self.report(
@@ -988,23 +986,16 @@ class CheckImagesBot:
             repme += has_duplicates % {'force': forced_mode}
 
             for dup_page in duplicates:
-                if dup_page.title(as_url=True) \
-                   == self.image.title(as_url=True):
-                    # the image itself, not report also this as duplicate
-                    continue
-                repme += '\n** [[:{}{}]]'.format(self.image_namespace,
-                                                 dup_page.title(as_url=True))
+                if dup_page.title(as_url=True) != self.image.title(as_url=True):
+                    repme += '\n** [[:{}{}]]'.format(self.image_namespace,
+                                                     dup_page.title(as_url=True))
 
             result = self.report_image(self.image_name, self.rep_page,
                                        self.com, repme, addings=False)
             if not result:
                 return True  # If Errors, exit (but continue the check)
 
-        if older_image_page.title() != self.image_name:
-            # The image is a duplicate, it will be deleted. So skip the
-            # check-part, useless
-            return False
-        return True  # Ok - No problem. Let's continue the checking phase
+        return older_image_page.title() == self.image_name
 
     def report_image(self, image_to_report, rep_page=None, com=None,
                      rep_text=None, addings: bool = True) -> bool:

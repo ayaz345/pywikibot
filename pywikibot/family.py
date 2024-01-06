@@ -311,16 +311,15 @@ class Family:
         if fam in Family._families:
             return Family._families[fam]
 
-        if fam in config.family_files:
-            family_file = config.family_files[fam]
-
-            if family_file.startswith(('http://', 'https://')):
-                myfamily = AutoFamily(fam, family_file)
-                Family._families[fam] = myfamily
-                return Family._families[fam]
-        else:
+        if fam not in config.family_files:
             raise UnknownFamilyError(f'Family {fam} does not exist')
 
+        family_file = config.family_files[fam]
+
+        if family_file.startswith(('http://', 'https://')):
+            myfamily = AutoFamily(fam, family_file)
+            Family._families[fam] = myfamily
+            return Family._families[fam]
         try:
             # Ignore warnings due to dots in family names.
             # TODO: use more specific filter, so that family classes can use
@@ -340,19 +339,16 @@ class Family:
         # Family 'name' and the 'langs' codes must be ascii letters and digits,
         # and codes must be lower-case due to the Site loading algorithm;
         # codes can accept also underscore/dash.
-        if not all(x in NAME_CHARACTERS for x in cls.name):
+        if any(x not in NAME_CHARACTERS for x in cls.name):
             warnings.warn(
-                'Name of family {} must be ASCII letters and digits '
-                '[a-zA-Z0-9]'.format(cls.name),
+                f'Name of family {cls.name} must be ASCII letters and digits [a-zA-Z0-9]',
                 FamilyMaintenanceWarning,
                 stacklevel=2,
             )
         for code in cls.langs.keys():
-            if not all(x in CODE_CHARACTERS for x in code):
+            if any(x not in CODE_CHARACTERS for x in code):
                 warnings.warn(
-                    'Family {} code {} must be ASCII lowercase letters and '
-                    'digits [a-z0-9] or underscore/dash [_-]'
-                    .format(cls.name, code),
+                    f'Family {cls.name} code {code} must be ASCII lowercase letters and digits [a-z0-9] or underscore/dash [_-]',
                     FamilyMaintenanceWarning,
                     stacklevel=2,
                 )
@@ -490,10 +486,7 @@ class Family:
         """Return the protocol and hostname."""
         if protocol is None:
             protocol = self.protocol(code)
-        if protocol == 'https':
-            host = self.ssl_hostname(code)
-        else:
-            host = self.hostname(code)
+        host = self.ssl_hostname(code) if protocol == 'https' else self.hostname(code)
         return protocol, host
 
     def base_url(self, code: str, uri: str, protocol=None) -> str:
@@ -580,7 +573,7 @@ class Family:
 
         path = parsed.path
         if parsed.query:
-            path += '?' + parsed.query
+            path += f'?{parsed.query}'
 
         # Discard $1 and everything after it
         path, *_ = path.partition('$1')
@@ -615,8 +608,8 @@ class Family:
             return None
 
         raise RuntimeError(
-            'Found multiple matches for URL "{}": {}'
-            .format(url, ', '.join(str(s) for s in matched_sites)))
+            f"""Found multiple matches for URL "{url}": {', '.join(str(s) for s in matched_sites)}"""
+        )
 
     @deprecated('config.maximum_GET_length', since='8.0.0')
     def maximum_GET_length(self, code):
@@ -834,7 +827,7 @@ class FandomFamily(Family):
 
     def scriptpath(self, code):
         """Return the script path for this family."""
-        return '' if code == 'en' else ('/' + code)
+        return '' if code == 'en' else f'/{code}'
 
 
 class WikimediaFamily(Family):
@@ -970,7 +963,7 @@ class WikimediaFamily(Family):
         """Domain property."""
         if cls.name in (cls.multi_language_content_families
                         + cls.other_content_families):
-            return cls.name + '.org'
+            return f'{cls.name}.org'
         if cls.name in cls.wikimedia_org_families:
             return 'wikimedia.org'
 

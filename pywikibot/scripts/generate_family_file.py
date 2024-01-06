@@ -98,7 +98,7 @@ class FamilyFileGenerator:
         self.wikis = {}  # {'https://wiki/$1': Wiki('https://wiki/$1'), ...}
         self.langs = []  # [Wiki('https://wiki/$1'), ...]
 
-    def get_params(self) -> bool:  # pragma: no cover
+    def get_params(self) -> bool:    # pragma: no cover
         """Ask for parameters if necessary."""
         if self.base_url is None:
             with suppress(KeyboardInterrupt):
@@ -119,8 +119,9 @@ class FamilyFileGenerator:
                 return False
 
         if any(x not in NAME_CHARACTERS for x in self.name):
-            print('ERROR: Name of family "{}" must be ASCII letters and '
-                  'digits [a-zA-Z0-9]'.format(self.name))
+            print(
+                f'ERROR: Name of family "{self.name}" must be ASCII letters and digits [a-zA-Z0-9]'
+            )
             return False
 
         return True
@@ -129,7 +130,7 @@ class FamilyFileGenerator:
         """Get wiki from base_url."""
         import pywikibot
         from pywikibot.exceptions import FatalServerError
-        pywikibot.info('Generating family file from ' + self.base_url)
+        pywikibot.info(f'Generating family file from {self.base_url}')
         for verify in (True, False):
             try:
                 w = self.Wiki(self.base_url, verify=verify)
@@ -181,7 +182,7 @@ class FamilyFileGenerator:
             self.langs = []
             print(e, '; continuing...')
 
-        if len([lang for lang in self.langs if lang['url'] == w.iwpath]) == 0:
+        if not [lang for lang in self.langs if lang['url'] == w.iwpath]:
             if w.private_wiki:
                 w.lang = self.name
             self.langs.append({'language': w.lang,
@@ -230,10 +231,9 @@ class FamilyFileGenerator:
                               or wiki['url'] == w.iwpath]
 
         for wiki in self.langs:
-            assert all(x in CODE_CHARACTERS for x in wiki['prefix']), \
-                'Family {} code {} must be ASCII lowercase ' \
-                'letters and digits [a-z0-9] or underscore/dash [_-]' \
-                .format(self.name, wiki['prefix'])
+            assert all(
+                x in CODE_CHARACTERS for x in wiki['prefix']
+            ), f"Family {self.name} code {wiki['prefix']} must be ASCII lowercase letters and digits [a-z0-9] or underscore/dash [_-]"
 
     def getapis(self) -> None:
         """Load other site pages."""

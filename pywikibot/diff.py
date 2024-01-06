@@ -65,8 +65,8 @@ class Hunk:
 
         self.header = self.get_header()
         self.diff_plain_text = '{hunk.header}\n{hunk.diff_plain_text}' \
-                               .format(hunk=self)
-        self.diff_text = str(self.diff_text)
+                                   .format(hunk=self)
+        self.diff_text = self.diff_text
 
         self.reviewed = self.PENDING
 
@@ -100,13 +100,13 @@ class Hunk:
             # what difflib.ndiff does do too.
             if tag == 'equal':
                 for line in self.a[i1:i2]:
-                    yield '  ' + check_line(line)
+                    yield f'  {check_line(line)}'
             elif tag == 'delete':
                 for line in self.a[i1:i2]:
-                    yield '- ' + check_line(line)
+                    yield f'- {check_line(line)}'
             elif tag == 'insert':
                 for line in self.b[j1:j2]:
-                    yield '+ ' + check_line(line)
+                    yield f'+ {check_line(line)}'
             elif tag == 'replace':
                 for line in difflib.ndiff(self.a[i1:i2], self.b[j1:j2]):
                     yield check_line(line)
@@ -169,8 +169,7 @@ class Hunk:
 
         if line_ref is None:
             if color in self.colors:
-                colored_line = f'<<{self.colors[color]}>>{line}<<default>>'
-                return colored_line
+                return f'<<{self.colors[color]}>>{line}<<default>>'
             return line
 
         colored_line = ''
@@ -181,16 +180,16 @@ class Hunk:
             char_tagged = char
             if color_closed:
                 if char_ref != ' ':
-                    if char != ' ':
-                        apply_color = self.colors[color]
-                    else:
-                        apply_color = 'default;' + self.bg_colors[color]
+                    apply_color = (
+                        self.colors[color]
+                        if char != ' '
+                        else f'default;{self.bg_colors[color]}'
+                    )
                     char_tagged = f'<<{apply_color}>>{char}'
                     color_closed = False
-            else:
-                if char_ref == ' ':
-                    char_tagged = f'<<default>>{char}'
-                    color_closed = True
+            elif char_ref == ' ':
+                char_tagged = f'<<default>>{char}'
+                color_closed = True
             colored_line += char_tagged
 
         if not color_closed:
@@ -446,7 +445,7 @@ class PatchManager:
 
             if choice in ['y', 'n']:
                 super_hunk.reviewed = \
-                    Hunk.APPR if choice == 'y' else Hunk.NOT_APPR
+                        Hunk.APPR if choice == 'y' else Hunk.NOT_APPR
                 if next_pending is not None:
                     position = next_pending
                 else:
@@ -461,14 +460,14 @@ class PatchManager:
                     for hunk in super_hunk:
                         if hunk.reviewed == Hunk.PENDING:
                             hunk.reviewed = \
-                                Hunk.APPR if choice == 'a' else Hunk.NOT_APPR
+                                    Hunk.APPR if choice == 'a' else Hunk.NOT_APPR
                 position = find_pending(0, position)
             elif choice == 'g':
                 hunk_list = []
                 rng_width = 18
                 for index, super_hunk in enumerate(super_hunks, start=1):
                     assert -1 <= super_hunk.reviewed <= 1, \
-                        "The super hunk's review status is unknown."
+                            "The super hunk's review status is unknown."
                     status = ' +-'[super_hunk.reviewed]
 
                     if super_hunk[0].a_rng[1] - super_hunk[0].a_rng[0] > 0:
@@ -502,8 +501,9 @@ class PatchManager:
                     next_hunk_position = int(next_hunk) - 1
                 except ValueError:
                     next_hunk_position = False
-                if (next_hunk_position is not False
-                        and 0 <= next_hunk_position < len(super_hunks)):
+                if next_hunk_position and 0 <= next_hunk_position < len(
+                    super_hunks
+                ):
                     position = next_hunk_position
                 elif next_hunk:  # nothing entered is silently ignored
                     pywikibot.error(

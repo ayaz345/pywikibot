@@ -58,7 +58,7 @@ class Page(BasePage, WikiBlameMixin):
         """
         return textlib.extract_templates_and_params(self.text, True, True)
 
-    def templatesWithParams(self):  # noqa: N802
+    def templatesWithParams(self):    # noqa: N802
         """Return templates used on this Page.
 
         The templates are extracted by :meth:`raw_extracted_templates`,
@@ -114,8 +114,7 @@ class Page(BasePage, WikiBlameMixin):
                         named[str(k)] = intkeys[k]
                 break
 
-            for item in named.items():
-                positional.append('{}={}'.format(*item))
+            positional.extend('{}={}'.format(*item) for item in named.items())
             result.append((pywikibot.Page(link, self.site), positional))
         return result
 
@@ -147,17 +146,13 @@ class Page(BasePage, WikiBlameMixin):
             target_page = pywikibot.Page(self.site, target_page)
         elif self.site != target_page.site:
             raise InterwikiRedirectPageError(self, target_page)
-        if not self.exists() and not (create or force):
+        if not self.exists() and not create and not force:
             raise NoPageError(self)
         if self.exists() and not self.isRedirectPage() and not force:
             raise IsNotRedirectPageError(self)
         redirect_regex = self.site.redirect_regex
-        if self.exists():
-            old_text = self.get(get_redirect=True)
-        else:
-            old_text = ''
-        result = redirect_regex.search(old_text)
-        if result:
+        old_text = self.get(get_redirect=True) if self.exists() else ''
+        if result := redirect_regex.search(old_text):
             oldlink = result[1]
             if (keep_section and '#' in oldlink
                     and target_page.section() is None):

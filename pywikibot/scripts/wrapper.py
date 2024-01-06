@@ -72,9 +72,9 @@ def check_pwb_versions(package: str):
     wikibot_version = Version(pwb.__version__)
 
     if scripts_version.release > wikibot_version.release:  # pragma: no cover
-        print('WARNING: Pywikibot version {} is behind scripts package '
-              'version {}.\nYour Pywikibot may need an update or be '
-              'misconfigured.\n'.format(wikibot_version, scripts_version))
+        print(
+            f'WARNING: Pywikibot version {wikibot_version} is behind scripts package version {scripts_version}.\nYour Pywikibot may need an update or be misconfigured.\n'
+        )
 
     # calculate previous minor release
     if wikibot_version.minor > 0:  # pragma: no cover
@@ -83,14 +83,13 @@ def check_pwb_versions(package: str):
                                        v=wikibot_version))
 
         if scripts_version.release < prev_wikibot.release:
-            print('WARNING: Scripts package version {} is behind legacy '
-                  'Pywikibot version {} and current version {}\nYour scripts '
-                  'may need an update or be misconfigured.\n'
-                  .format(scripts_version, prev_wikibot, wikibot_version))
+            print(
+                f'WARNING: Scripts package version {scripts_version} is behind legacy Pywikibot version {prev_wikibot} and current version {wikibot_version}\nYour scripts may need an update or be misconfigured.\n'
+            )
     elif scripts_version.release < wikibot_version.release:  # pragma: no cover
-        print('WARNING: Scripts package version {} is behind current version '
-              '{}\nYour scripts may need an update or be misconfigured.\n'
-              .format(scripts_version, wikibot_version))
+        print(
+            f'WARNING: Scripts package version {scripts_version} is behind current version {wikibot_version}\nYour scripts may need an update or be misconfigured.\n'
+        )
 
     del Version
 
@@ -201,7 +200,7 @@ def handle_args(
     return fname, list(args[index:]), local, env
 
 
-def _print_requirements(requirements, script, variant):  # pragma: no cover
+def _print_requirements(requirements, script, variant):    # pragma: no cover
     """Print pip command to install requirements."""
     if not requirements:
         return
@@ -211,8 +210,9 @@ def _print_requirements(requirements, script, variant):  # pragma: no cover
     else:
         format_string = '\nA package necessary for {} is {}.'
     print(format_string.format(script or 'pywikibot', variant))
-    print('Please update required module{} with:\n\n'
-          .format('s' if len(requirements) > 1 else ''))
+    print(
+        f"Please update required module{'s' if len(requirements) > 1 else ''} with:\n\n"
+    )
 
     for requirement in requirements:
         print(f"    pip install \"{str(requirement).partition(';')[0]}\"\n")
@@ -297,8 +297,11 @@ except RuntimeError as e:  # pragma: no cover
     import pywikibot as pwb
 
     # user config file to be created
-    if filename is not None and not (filename.startswith('generate_')
-                                     or filename == 'version.py'):
+    if (
+        filename is not None
+        and not filename.startswith('generate_')
+        and filename != 'version.py'
+    ):
         from pywikibot.config import user_config_file
         if user_config_file != 'user-config.py':
             # do not create a user config file if name is not default
@@ -351,10 +354,9 @@ def find_alternates(filename, script_paths):
     if len(similar_scripts) == 1:
         script = similar_scripts[0]
         wait_time = config.pwb_autostart_waittime
-        info('NOTE: Starting the most similar script '
-             '<<lightyellow>>{}.py<<default>>\n'
-             '      in {} seconds; type CTRL-C to stop.'
-             .format(script, wait_time))
+        info(
+            f'NOTE: Starting the most similar script <<lightyellow>>{script}.py<<default>>\n      in {wait_time} seconds; type CTRL-C to stop.'
+        )
         try:
             sleep(wait_time)  # Wait a bit to let it be cancelled
         except KeyboardInterrupt:
@@ -416,10 +418,7 @@ def find_filename(filename):
 
     # search for system scripts in pywikibot.scripts directory
     found = test_paths([''], wrapper_dir)
-    if found:
-        return found
-
-    return find_alternates(filename, path_list)
+    return found if found else find_alternates(filename, path_list)
 
 
 def execute():
@@ -436,11 +435,10 @@ def execute():
         script_args.append('-nolog')
 
     if global_args:  # don't use sys.argv
-        unknown_args = pwb.handle_args(global_args)
-        if unknown_args:  # pragma: no cover
-            print('ERROR: unknown pwb.py argument{}: {}\n'
-                  .format('' if len(unknown_args) == 1 else 's',
-                          ', '.join(unknown_args)))
+        if unknown_args := pwb.handle_args(global_args):
+            print(
+                f"ERROR: unknown pwb.py argument{'' if len(unknown_args) == 1 else 's'}: {', '.join(unknown_args)}\n"
+            )
             return False
 
     if not filename:

@@ -209,8 +209,7 @@ class SparqlQuery(WaitingMixin):
         :return: item ids, e.g. Q1234
         :rtype: same as result_type
         """
-        res = self.select(query, full_data=True)
-        if res:
+        if res := self.select(query, full_data=True):
             return result_type(r[item_name].getID() for r in res)
         return result_type()
 
@@ -245,7 +244,7 @@ class URI(SparqlNode):
         return None
 
     def __repr__(self) -> str:
-        return '<' + self.value + '>'
+        return f'<{self.value}>'
 
 
 class Literal(SparqlNode):
@@ -259,10 +258,8 @@ class Literal(SparqlNode):
 
     def __repr__(self) -> str:
         if self.type:
-            return self.value + '^^' + self.type
-        if self.language:
-            return self.value + '@' + self.language
-        return self.value
+            return f'{self.value}^^{self.type}'
+        return f'{self.value}@{self.language}' if self.language else self.value
 
 
 class Bnode(SparqlNode):
@@ -273,7 +270,7 @@ class Bnode(SparqlNode):
         super().__init__(data.get('value'))
 
     def __repr__(self) -> str:
-        return '_:' + self.value
+        return f'_:{self.value}'
 
 
 VALUE_TYPES = {'uri': URI, 'literal': Literal, 'bnode': Bnode}

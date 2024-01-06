@@ -171,11 +171,7 @@ class Siteinfo(Container):
         if isinstance(expire, bool):
             return expire
 
-        if not cache_date:  # default values are always expired
-            return True
-
-        # cached date + expiry are in the past if it's expired
-        return cache_date + expire < datetime.datetime.utcnow()
+        return cache_date + expire < datetime.datetime.utcnow() if cache_date else True
 
     def _get_general(self, key: str, expiry):
         """
@@ -205,8 +201,8 @@ class Siteinfo(Container):
             props = [prop for prop in props if prop not in self._cache]
             if props:
                 pywikibot.debug(
-                    "Load siteinfo properties '{}' along with 'general'"
-                    .format("', '".join(props)))
+                    f"""Load siteinfo properties '{"', '".join(props)}' along with 'general'"""
+                )
             props.append('general')
             default_info = self._get_siteinfo(props, expiry)
             for prop in props:

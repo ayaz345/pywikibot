@@ -95,8 +95,7 @@ class BaseLink(ComparableMixin):
         self._nskey = self._nskey or default_nskey
 
         if isinstance(self._nskey, str):
-            ns = self.site.namespaces.lookup_name(self._nskey)
-            if ns:
+            if ns := self.site.namespaces.lookup_name(self._nskey):
                 return ns
             self._nskey = default_nskey
 
@@ -161,8 +160,8 @@ class BaseLink(ComparableMixin):
                     break
             else:
                 raise InvalidTitleError(
-                    'No corresponding title found for namespace {} on {}.'
-                    .format(self.namespace, onsite))
+                    f'No corresponding title found for namespace {self.namespace} on {onsite}.'
+                )
 
         if self.namespace != Namespace.MAIN:
             return f'{name}:{self.title}'
@@ -180,7 +179,7 @@ class BaseLink(ComparableMixin):
             onsite = self.site
         title = self.title
         if self.namespace != Namespace.MAIN:
-            title = onsite.namespace(self.namespace) + ':' + title
+            title = f'{onsite.namespace(self.namespace)}:{title}'
         if onsite == self.site:
             return f'[[{title}]]'
         if onsite.family == self.site.family:
@@ -275,13 +274,9 @@ class Link(BaseLink):
         """
         source_is_page = isinstance(source, pywikibot.page.BasePage)
 
-        if source_is_page:
-            self._source = source.site
-        else:
-            self._source = source or pywikibot.Site()
-
+        self._source = source.site if source_is_page else source or pywikibot.Site()
         assert isinstance(self._source, pywikibot.site.BaseSite), \
-            'source parameter should be either a Site or Page object'
+                'source parameter should be either a Site or Page object'
 
         self._text = text
         # See bug T104864, default_namespace might have been deleted.
@@ -319,9 +314,10 @@ class Link(BaseLink):
         # Cleanup whitespace
         sep = self._source.family.title_delimiter_and_aliases[0]
         t = re.sub(
-            '[{}\xa0\u1680\u180E\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]+'
-            .format(self._source.family.title_delimiter_and_aliases),
-            sep, t)
+            f'[{self._source.family.title_delimiter_and_aliases}\xa0\u1680\u180E\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]+',
+            sep,
+            t,
+        )
         # Strip spaces at both ends
         t = t.strip()
         # Remove left-to-right and right-to-left markers.
@@ -354,8 +350,7 @@ class Link(BaseLink):
                 t = t.lstrip(':').lstrip(' ')
                 continue
             prefix = t[:t.index(':')].lower()  # part of text before :
-            ns = self._source.namespaces.lookup_name(prefix)
-            if ns:
+            if ns := self._source.namespaces.lookup_name(prefix):
                 # The prefix is a namespace in the source wiki
                 return (fam.name, code)
             if prefix in fam.langs:
@@ -392,8 +387,7 @@ class Link(BaseLink):
             while (len(self._text) > colon_position
                     and self._text[colon_position] == ' '):
                 colon_position += 1
-            ns = self._site.namespaces.lookup_name(prefix)
-            if ns:
+            if ns := self._site.namespaces.lookup_name(prefix):
                 if len(self._text) <= colon_position:
                     raise InvalidTitleError(
                         f"'{self._text}' has no title.")
@@ -408,16 +402,14 @@ class Link(BaseLink):
                 break  # text before : doesn't match any known prefix
             except SiteDefinitionError as e:
                 raise SiteDefinitionError(
-                    '{} is not a local page on {}, and the interwiki '
-                    'prefix {} is not supported by Pywikibot!\n{}'
-                    .format(self._text, self._site, prefix, e))
+                    f'{self._text} is not a local page on {self._site}, and the interwiki prefix {prefix} is not supported by Pywikibot!\n{e}'
+                )
             else:
                 if first_other_site:
                     if not self._site.local_interwiki(prefix):
                         raise InvalidTitleError(
-                            '{} links to a non local site {} via an '
-                            'interwiki link to {}.'.format(
-                                self._text, newsite, first_other_site))
+                            f'{self._text} links to a non local site {newsite} via an interwiki link to {first_other_site}.'
+                        )
                 elif newsite != self._source:
                     first_other_site = newsite
                 self._site = newsite
@@ -448,12 +440,10 @@ class Link(BaseLink):
                     next_ns = t[:t.index(':')]
                     if self._site.namespaces.lookup_name(next_ns):
                         raise InvalidTitleError(
-                            "The (non-)talk page of '{}' is a valid title "
-                            'in another namespace.'.format(self._text))
+                            f"The (non-)talk page of '{self._text}' is a valid title in another namespace."
+                        )
 
-        # Reject illegal characters.
-        m = Link.illegal_titles_pattern.search(t)
-        if m:
+        if m := Link.illegal_titles_pattern.search(t):
             raise InvalidTitleError(f'{t!r} contains illegal char(s) {m[0]!r}')
 
         # Pages with "/./" or "/../" appearing in the URLs will
@@ -586,7 +576,7 @@ class Link(BaseLink):
         return link
 
     @classmethod
-    def langlinkUnsafe(cls, lang, title, source):  # noqa: N802
+    def langlinkUnsafe(cls, lang, title, source):    # noqa: N802
         """
         Create a "lang:title" Link linked from source.
 
@@ -612,8 +602,7 @@ class Link(BaseLink):
         link._namespace = link._site.namespaces[0]
         if ':' in title:
             ns, t = title.split(':', 1)
-            ns = link._site.namespaces.lookup_name(ns)
-            if ns:
+            if ns := link._site.namespaces.lookup_name(ns):
                 link._namespace = ns
                 title = t
 
@@ -717,10 +706,9 @@ class SiteLink(BaseLink):
             site = pywikibot.site.APISite.fromDBName(site)
 
         prefix = title[:title.index(':')].lower()  # part of text before :
-        ns = site.namespaces.lookup_name(prefix)
-        if ns:  # The prefix is a namespace in the source wiki
+        if ns := site.namespaces.lookup_name(prefix):
             namespace, _, title = title.partition(':')
-        else:  # The ':' is part of the actual title see e.g. Q3700510
+        else:
             namespace = None
 
         return (site, namespace, title)
@@ -753,18 +741,17 @@ class SiteLink(BaseLink):
             sl._badges.add(pywikibot.ItemPage(repo, badge))
         return sl
 
-    def toJSON(self) -> dict[str, str | list[str]]:  # noqa: N802
+    def toJSON(self) -> dict[str, str | list[str]]:    # noqa: N802
         """
         Convert the SiteLink to a JSON object for the Wikibase API.
 
         :return: Wikibase JSON
         """
-        json = {
+        return {
             'site': self._sitekey,
             'title': self._rawtitle,
-            'badges': [badge.title() for badge in self.badges]
+            'badges': [badge.title() for badge in self.badges],
         }
-        return json
 
 
 # Utility functions for parsing page titles

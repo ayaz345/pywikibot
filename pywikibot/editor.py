@@ -183,8 +183,7 @@ class TextEditor:
                          'pythonw.exe']
 
         for ext in ['py', 'txt']:
-            editor = TextEditor._win32_extension_command(ext)
-            if editor:
+            if editor := TextEditor._win32_extension_command(ext):
                 for unusable in unusable_exes:
                     if unusable in editor.lower():
                         break

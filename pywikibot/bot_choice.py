@@ -55,9 +55,7 @@ class Option(ABC):
 
         :return: Text with the options formatted into it
         """
-        formatted_options = []
-        for option in options:
-            formatted_options.append(option.format(default=default))
+        formatted_options = [option.format(default=default) for option in options]
         # remove color highlights before fill function
         text = f"{text} ({', '.join(formatted_options)})"
         pattern = '<<[a-z]+>>'
@@ -157,9 +155,7 @@ class StandardOption(Option):
         if self.shortcut == default:
             shortcut = self.shortcut.upper()
         if index >= 0:
-            return '{}[{}]{}'.format(
-                self.option[:index], shortcut,
-                self.option[index + len(self.shortcut):])
+            return f'{self.option[:index]}[{shortcut}]{self.option[index + len(self.shortcut):]}'
         return f'{self.option} [{shortcut}]'
 
     def result(self, value: str) -> Any:
@@ -316,26 +312,25 @@ class LinkChoice(Choice):
         if not self.replacer:
             raise ValueError('LinkChoice requires a replacer')
 
-        kwargs = {}
-        if self._section:
-            kwargs['section'] = self.replacer._new.section
-        else:
-            kwargs['section'] = self.replacer.current_link.section
+        kwargs = {
+            'section': self.replacer._new.section
+            if self._section
+            else self.replacer.current_link.section
+        }
         if self._label:
             if self.replacer._new.anchor is None:
                 kwargs['label'] = self.replacer._new.canonical_title()
                 if self.replacer._new.section:
-                    kwargs['label'] += '#' + self.replacer._new.section
+                    kwargs['label'] += f'#{self.replacer._new.section}'
             else:
                 kwargs['label'] = self.replacer._new.anchor
-        else:
-            if self.replacer.current_link.anchor is None:
-                kwargs['label'] = self.replacer.current_groups['title']
-                if self.replacer.current_groups['section']:
-                    kwargs['label'] += '#' \
+        elif self.replacer.current_link.anchor is None:
+            kwargs['label'] = self.replacer.current_groups['title']
+            if self.replacer.current_groups['section']:
+                kwargs['label'] += '#' \
                         + self.replacer.current_groups['section']
-            else:
-                kwargs['label'] = self.replacer.current_link.anchor
+        else:
+            kwargs['label'] = self.replacer.current_link.anchor
         return pywikibot.Link.create_separated(
             self.replacer._new.canonical_title(), self.replacer._new.site,
             **kwargs)
@@ -429,12 +424,9 @@ class IntegerOption(Option):
             else:
                 maximum = '' if self.maximum is None else str(self.maximum)
             default = f'-{default}-' if default else '-'
-            if self.minimum == self.maximum:
-                rng = minimum
-            else:
-                rng = minimum + default + maximum
+            rng = minimum if self.minimum == self.maximum else minimum + default + maximum
         else:
-            rng = 'any' + default
+            rng = f'any{default}'
         return f'{self.prefix}<number> [{rng}]'
 
     def parse(self, value: str) -> int:
@@ -508,9 +500,7 @@ class ShowingListOption(ListOption, OutputOption):
     @property
     def out(self) -> str:
         """Output text of the enumerated list."""
-        text = ''
-        if self.pre is not None:
-            text = self.pre + '\n'
+        text = self.pre + '\n' if self.pre is not None else ''
         width = len(str(self.maximum))
         for i, item in enumerate(self._list, self.minimum):
             text += '{:>{width}} - {}\n'.format(i, item, width=width)

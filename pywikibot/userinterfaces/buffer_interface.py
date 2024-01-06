@@ -76,8 +76,8 @@ class UI(ABUIC):
                 output.append(record.getMessage())
             else:
                 raise ValueError(
-                    'BUG: buffer can only contain logs and strings, had {}'
-                    .format(type(record).__name__))
+                    f'BUG: buffer can only contain logs and strings, had {type(record).__name__}'
+                )
 
         return output
 

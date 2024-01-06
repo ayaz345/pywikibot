@@ -106,9 +106,7 @@ class ParamInfo(Sized, Container):
     @staticmethod
     def _modules_to_set(modules: Iterable | str) -> set[str]:
         """Return modules as a set."""
-        if isinstance(modules, str):
-            return set(modules.split('|'))
-        return set(modules)
+        return set(modules.split('|')) if isinstance(modules, str) else set(modules)
 
     def fetch(self, modules: Iterable | str) -> None:
         """Fetch paraminfo for multiple modules.
@@ -226,14 +224,11 @@ class ParamInfo(Sized, Container):
         # of the given module so skip those
         for param in parameters:
             if module == 'main' and param['name'] == 'format' \
-               or 'submodules' not in param:
+                   or 'submodules' not in param:
                 continue
 
             for child, submodule in param['submodules'].items():
-                if '+' in submodule:
-                    parent = submodule.rsplit('+', 1)[0]
-                else:
-                    parent = 'main'
+                parent = submodule.rsplit('+', 1)[0] if '+' in submodule else 'main'
                 if parent == module:
                     submodules.add(child)
 
@@ -251,7 +246,7 @@ class ParamInfo(Sized, Container):
                     "'query' module has no 'generator' parameter")
 
             assert param['name'] == 'generator' \
-                and submodules >= set(param['type'])
+                    and submodules >= set(param['type'])
 
     def _normalize_modules(self, modules) -> set:
         """Add query+ to any query module name not also in action modules."""
@@ -260,11 +255,14 @@ class ParamInfo(Sized, Container):
 
         assert self._action_modules
 
-        return {'query+' + mod
-                if '+' not in mod and mod in self.query_modules
-                and mod not in self._action_modules
-                else mod
-                for mod in modules}
+        return {
+            f'query+{mod}'
+            if '+' not in mod
+            and mod in self.query_modules
+            and mod not in self._action_modules
+            else mod
+            for mod in modules
+        }
 
     def normalize_modules(self, modules) -> set:
         """Convert the modules into module paths.
@@ -317,7 +315,7 @@ class ParamInfo(Sized, Container):
         if key in self._paraminfo:
             return self._paraminfo[key]
         if '+' not in key:
-            return self._paraminfo['query+' + key]
+            return self._paraminfo[f'query+{key}']
         raise KeyError(key)
 
     def __contains__(self, key) -> bool:

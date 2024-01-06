@@ -532,40 +532,34 @@ def pywikibot_script_docstring_fixups(app, what, name, obj, options, lines):
         if index == 0:  # highlight the first line
             lines[0] = f"**{line.strip('.')}**"
 
-        # add link for pagegenerators options
         elif line == '&params;':
             lines[index] = ('This script supports use of '
                             ':py:mod:`pagegenerators` arguments.')
 
-        # add link for fixes
         elif name == 'scripts.replace' and line == '&fixes-help;':
             lines[index] = ('                  The available fixes are listed '
                             'in :py:mod:`pywikibot.fixes`.')
 
-        # replace cosmetic changes warning
         elif name == 'scripts.cosmetic_changes' and line == '&warning;':
             lines[index] = warning
 
-        # Initiate code block except pagegenerator arguments follows
         elif (line.endswith(':') and not line.lstrip().startswith(':')
                 and 'Traceback (most recent call last)' not in line):
             for afterline in lines[index + 1:]:
                 if not afterline:
                     continue
                 if afterline != '&params;':
-                    lines[index] = line + ':'
+                    lines[index] = f'{line}:'
                 break
 
         # adjust options
         if line.startswith('-'):
-            # Indent options
-            match = re.match(r'-[^ ]+? +', line)
-            if match:
+            if match := re.match(r'-[^ ]+? +', line):
                 length = len(match[0])
-            lines[index] = ' ' + line
+            lines[index] = f' {line}'
         elif length and line.startswith(' ' * length):
             # Indent descriptions of options (as options are indented)
-            lines[index] = ' ' + line
+            lines[index] = f' {line}'
         elif line:
             # Reset length
             length = 0

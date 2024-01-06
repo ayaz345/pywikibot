@@ -423,7 +423,7 @@ class Request(MutableMapping, WaitingMixin):
             # Work around this by requiring userinfo only if 'tokens' and
             # 'login' are not both set.
             typep = self._params.get('type', [])
-            if not ('tokens' in meta and 'login' in typep):
+            if 'tokens' not in meta or 'login' not in typep:
                 if 'userinfo' not in meta:
                     meta = set(meta + ['userinfo'])
                     self['meta'] = sorted(meta)
@@ -431,7 +431,7 @@ class Request(MutableMapping, WaitingMixin):
                 uiprop = set(uiprop + ['blockinfo', 'hasmsg'])
                 self['uiprop'] = sorted(uiprop)
             if 'prop' in self._params \
-               and self.site.has_extension('ProofreadPage'):
+                   and self.site.has_extension('ProofreadPage'):
                 prop = set(self['prop'] + ['proofread'])
                 self['prop'] = sorted(prop)
 
@@ -905,8 +905,9 @@ but {scheme!r} is required. Please add the following code to your family file:
                                'readonly',  # T154011
                                ]
 
-        pywikibot.error('Detected MediaWiki API exception {}{}'
-                        .format(e, '; retrying' if retry else '; raising'))
+        pywikibot.error(
+            f"Detected MediaWiki API exception {e}{'; retrying' if retry else '; raising'}"
+        )
         param_repr = str(self._params)
         pywikibot.log(f'MediaWiki exception {class_name} details:\n'
                       f'          query=\n{pprint.pformat(param_repr)}\n'
@@ -960,8 +961,7 @@ but {scheme!r} is required. Please add the following code to your family file:
         while True:
             paramstring = self._http_param_string()
 
-            simulate = self._simulate(self.action)
-            if simulate:
+            if simulate := self._simulate(self.action):
                 return simulate
 
             if self.throttle:
@@ -1010,7 +1010,7 @@ but {scheme!r} is required. Please add the following code to your family file:
                 retries += 1
                 if retries > max(5, pywikibot.config.max_retries):
                     break
-                pywikibot.log('Pausing due to database lag: ' + info)
+                pywikibot.log(f'Pausing due to database lag: {info}')
 
                 try:
                     lag = error['lag']
@@ -1036,7 +1036,7 @@ but {scheme!r} is required. Please add the following code to your family file:
 
             # Phab. tickets T48535, T64126, T68494, T68619
             if code == 'failed-save' \
-               and self._is_wikibase_error_retryable(error):
+                   and self._is_wikibase_error_retryable(error):
                 self.wait()
                 continue
 
@@ -1046,7 +1046,7 @@ but {scheme!r} is required. Please add the following code to your family file:
 
             # If notloggedin or readapidenied is returned try to login
             if code in ('notloggedin', 'readapidenied') \
-               and self.site._loginstatus in (LoginStatus.NOT_ATTEMPTED,
+                   and self.site._loginstatus in (LoginStatus.NOT_ATTEMPTED,
                                               LoginStatus.NOT_LOGGED_IN):
                 self.site.login()
                 continue
@@ -1066,13 +1066,12 @@ but {scheme!r} is required. Please add the following code to your family file:
 
             if code in ('search-title-disabled', 'search-text-disabled'):
                 prefix = 'gsr' if 'gsrsearch' in self._params else 'sr'
-                del self._params[prefix + 'what']
+                del self._params[f'{prefix}what']
                 # use intitle: search instead
                 if code == 'search-title-disabled' \
-                   and self.site.has_extension('CirrusSearch'):
-                    key = prefix + 'search'
-                    self._params[key] = ['intitle:' + search
-                                         for search in self._params[key]]
+                       and self.site.has_extension('CirrusSearch'):
+                    key = f'{prefix}search'
+                    self._params[key] = [f'intitle:{search}' for search in self._params[key]]
                 continue
 
             if code == 'urlshortener-blocked':  # T244062
@@ -1246,12 +1245,11 @@ class CachedRequest(Request):
 
     def submit(self):
         """Submit cached request."""
-        cached_available = self._load_cache()
-        if not cached_available:
+        if cached_available := self._load_cache():
+            self._handle_warnings(self._data)
+        else:
             self._data = super().submit()
             self._write_cache(self._data)
-        else:
-            self._handle_warnings(self._data)
         return self._data
 
 

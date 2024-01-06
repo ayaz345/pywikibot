@@ -72,15 +72,15 @@ class CategoryRedirectBot(ConfigParserBot, SingleSiteBot):
     def __init__(self, **kwargs) -> None:
         """Initializer."""
         super().__init__(**kwargs)
-        self.catprefix = self.site.namespace(14) + ':'
+        self.catprefix = f'{self.site.namespace(14)}:'
         self.log_text = []
         self.edit_requests = []
         self.problems = []
         self.template_list = []
         self.cat = None
-        self.log_page = pywikibot.Page(self.site,
-                                       'User:{}/category redirect log'
-                                       .format(self.site.username()))
+        self.log_page = pywikibot.Page(
+            self.site, f'User:{self.site.username()}/category redirect log'
+        )
         self.move_comment = 'category_redirect-change-category'
         self.redir_comment = 'category_redirect-add-template'
         self.dbl_redir_comment = 'category_redirect-fix-double'
@@ -159,7 +159,7 @@ class CategoryRedirectBot(ConfigParserBot, SingleSiteBot):
         # sort by keys and keep the first (LOG_SIZE-1) values
         keep = [text for (key, text) in
                 sorted(log_items.items(), reverse=True)[:LOG_SIZE - 1]]
-        log_text = '\n'.join('\n'.join(line for line in text) for text in keep)
+        log_text = '\n'.join('\n'.join(text) for text in keep)
         # get permalink to older logs
         history = list(self.log_page.revisions(total=LOG_SIZE))
         # get the id of the newest log being archived
@@ -255,7 +255,7 @@ class CategoryRedirectBot(ConfigParserBot, SingleSiteBot):
         except OSError:
             self.record = {}
         if self.record:
-            with open(self.datafile + '.bak', 'wb') as f:
+            with open(f'{self.datafile}.bak', 'wb') as f:
                 pickle.dump(self.record, f, protocol=config.pickle_protocol)
         # regex to match soft category redirects
         # TODO: enhance and use textlib.MultiTemplateMatchBuilder
@@ -280,8 +280,9 @@ class CategoryRedirectBot(ConfigParserBot, SingleSiteBot):
         nonemptypages = []
         redircat = self.cat
 
-        pywikibot.info('\nChecking {} category redirect pages'
-                       .format(redircat.categoryinfo['subcats']))
+        pywikibot.info(
+            f"\nChecking {redircat.categoryinfo['subcats']} category redirect pages"
+        )
         catpages = set()
         for cat in redircat.subcategories():
             catpages.add(cat)
@@ -316,8 +317,9 @@ class CategoryRedirectBot(ConfigParserBot, SingleSiteBot):
                                   self.catprefix + cat_name) not in catpages:
                 del self.record[cat_name]
 
-        pywikibot.info('\nMoving pages out of {} redirected categories.'
-                       .format(len(nonemptypages)))
+        pywikibot.info(
+            f'\nMoving pages out of {len(nonemptypages)} redirected categories.'
+        )
 
         for cat in pagegenerators.PreloadingGenerator(nonemptypages):
             i18n_param = {'oldcat': cat.title(as_link=True, textlink=True)}

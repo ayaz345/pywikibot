@@ -51,9 +51,7 @@ class ABUIC(ABC):
 
         Called by bot.input().
         """
-        if args:
-            return input(args[0])
-        return input()
+        return input(args[0]) if args else input()
 
     @abstractmethod
     def input_choice(self, *args, **kwargs) -> int | str:

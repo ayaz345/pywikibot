@@ -86,16 +86,15 @@ class MWSite:
             raise RuntimeError(f'Unsupported version: {self.version}')
 
         if not self.articlepath:
-            if self.private_wiki:
-                if self.api != self.fromurl and self.private_wiki:
-                    self.articlepath = self.fromurl.rsplit('/', 1)[0] + '/$1'
-                else:
-                    raise RuntimeError(
-                        'Unable to determine articlepath because the wiki is '
-                        'private. Use the Main Page URL instead of the API.')
-            else:
+            if not self.private_wiki:
                 raise RuntimeError(
                     f'Unable to determine articlepath: {self.fromurl}')
+            if self.api == self.fromurl:
+                raise RuntimeError(
+                    'Unable to determine articlepath because the wiki is '
+                    'private. Use the Main Page URL instead of the API.')
+            else:
+                self.articlepath = self.fromurl.rsplit('/', 1)[0] + '/$1'
 
     def __repr__(self) -> str:
         return f'{type(self).__name__}("{self.fromurl}")'
@@ -104,13 +103,11 @@ class MWSite:
     def langs(self):
         """Build interwikimap."""
         response = fetch(
-            self.api
-            + '?action=query&meta=siteinfo&siprop=interwikimap'
-              '&sifilteriw=local&format=json')
+            f'{self.api}?action=query&meta=siteinfo&siprop=interwikimap&sifilteriw=local&format=json'
+        )
         iw = response.json()
 
-        error = iw.get('error')
-        if error:
+        if error := iw.get('error'):
             raise RuntimeError(f"{error['code']} - {error['info']}")
 
         return [wiki for wiki in iw['query']['interwikimap']
@@ -120,7 +117,7 @@ class MWSite:
         """Extract the version from API help with ?version enabled."""
         if self.version is None:
             try:
-                r = fetch(self.api + '?version&format=json')
+                r = fetch(f'{self.api}?version&format=json')
                 try:
                     d = r.json()
                 except JSONDecodeError:
@@ -138,7 +135,7 @@ class MWSite:
 
     def _parse_site(self) -> None:
         """Parse siteinfo data."""
-        response = fetch(self.api + '?action=query&meta=siteinfo&format=json')
+        response = fetch(f'{self.api}?action=query&meta=siteinfo&format=json')
         check_response(response)
         # remove preleading newlines and Byte Order Mark (BOM), see T128992
         content = response.text.strip().lstrip('\uFEFF')
@@ -240,24 +237,23 @@ class WikiHTMLPageParser(HTMLParser):
 
         if not new_parsed_url.scheme or not new_parsed_url.netloc:
             new_parsed_url = urlparse(
-                '{}://{}{}'.format(
-                    new_parsed_url.scheme or self.url.scheme,
-                    new_parsed_url.netloc or self.url.netloc,
-                    new_parsed_url.path))
-        else:
-            if self._parsed_url:
-                # allow upgrades to https, but not downgrades
-                if self._parsed_url.scheme == 'https' \
+                f'{new_parsed_url.scheme or self.url.scheme}://{new_parsed_url.netloc or self.url.netloc}{new_parsed_url.path}'
+            )
+        elif self._parsed_url:
+            # allow upgrades to https, but not downgrades
+            if self._parsed_url.scheme == 'https' \
                    and new_parsed_url.scheme != self._parsed_url.scheme:
-                    return
+                return
 
                 # allow http://www.brickwiki.info/ vs http://brickwiki.info/
-                if (new_parsed_url.netloc in self._parsed_url.netloc
+            if (new_parsed_url.netloc in self._parsed_url.netloc
                         or self._parsed_url.netloc in new_parsed_url.netloc):
-                    return
+                return
 
-                assert new_parsed_url == self._parsed_url, '{} != {}'.format(
-                    self._parsed_url, new_parsed_url)
+            else:
+                assert (
+                    new_parsed_url == self._parsed_url
+                ), f'{self._parsed_url} != {new_parsed_url}'
 
         self._parsed_url = new_parsed_url
         self.server = '{url.scheme}://{url.netloc}'.format(
@@ -298,10 +294,10 @@ def check_response(response):
             try:
                 status = HTTPStatus(response.status_code)
             except ValueError as err:
-                m = re.search(r'\d{3}', err.args[0], flags=re.ASCII)
-                if not m:
+                if m := re.search(r'\d{3}', err.args[0], flags=re.ASCII):
+                    msg = f'Generic {err_type} Error ({m.group()})'
+                else:
                     raise err
-                msg = f'Generic {err_type} Error ({m.group()})'
             else:
                 msg = f'({status}) {status.description}'
 

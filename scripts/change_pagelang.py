@@ -171,16 +171,13 @@ def main(*args: str) -> None:
 
     # Check if the language you are trying to set is allowed.
     if options['setlang'] not in allowedlanguages:
-        pywikibot.error('"{}" is not in the list of allowed language codes; '
-                        'aborting.\n\n The following is the list of allowed '
-                        'languages. Using "default" will unset any set '
-                        'language and use the default language for the wiki '
-                        'instead.\n\n'.format(options['setlang'])
-                        + ', '.join(allowedlanguages))
+        pywikibot.error(
+            f""""{options['setlang']}" is not in the list of allowed language codes; aborting.\n\n The following is the list of allowed languages. Using "default" will unset any set language and use the default language for the wiki instead.\n\n"""
+            + ', '.join(allowedlanguages)
+        )
         return
 
-    gen = gen_factory.getCombinedGenerator(preload=True)
-    if gen:
+    if gen := gen_factory.getCombinedGenerator(preload=True):
         bot = ChangeLangBot(generator=gen, **options)
         bot.run()
     else:

@@ -152,14 +152,11 @@ class Namespace(Iterable, ComparableMixin, metaclass=MetaNamespace):
 
         :param item: name to check
         """
-        if item == '' and self.id == BuiltinNamespace.MAIN:
+        if not item and self.id == BuiltinNamespace.MAIN:
             return True
 
         name = Namespace.normalize_name(item)
-        if not name:
-            return False
-
-        return self._contains_lowercase_name(name.lower())
+        return False if not name else self._contains_lowercase_name(name.lower())
 
     def __bool__(self) -> bool:
         """Obtain boolean method for Namepace class.
@@ -196,9 +193,9 @@ class Namespace(Iterable, ComparableMixin, metaclass=MetaNamespace):
             return ':'
 
         if id in (BuiltinNamespace.FILE, BuiltinNamespace.CATEGORY):
-            return ':' + name + ':'
+            return f':{name}:'
 
-        return name + ':'
+        return f'{name}:'
 
     def __str__(self) -> str:
         """Return the canonical string representation."""
@@ -232,10 +229,7 @@ class Namespace(Iterable, ComparableMixin, metaclass=MetaNamespace):
         if isinstance(other, Namespace):
             return self.id == other.id
 
-        if isinstance(other, str):
-            return other in self
-
-        return False
+        return other in self if isinstance(other, str) else False
 
     def __ne__(self, other):
         """Compare whether two namespace objects are not equal."""
@@ -260,19 +254,18 @@ class Namespace(Iterable, ComparableMixin, metaclass=MetaNamespace):
     def __repr__(self) -> str:
         """Return a reconstructable representation."""
         standard_attr = ['id', 'custom_name', 'canonical_name', 'aliases']
-        extra = [(key, self.__dict__[key])
-                 for key in sorted(self.__dict__)
-                 if key not in standard_attr]
-
-        if extra:
-            kwargs = ', ' + ', '.join(
-                key + f'={value!r}' for key, value in extra)
+        if extra := [
+            (key, self.__dict__[key])
+            for key in sorted(self.__dict__)
+            if key not in standard_attr
+        ]:
+            kwargs = ', ' + ', '.join(f'{key}={value!r}' for key, value in extra)
         else:
             kwargs = ''
 
         return '{}(id={}, custom_name={!r}, canonical_name={!r}, ' \
-               'aliases={!r}{})' \
-               .format(self.__class__.__name__,
+                   'aliases={!r}{})' \
+                   .format(self.__class__.__name__,
                        self.id,
                        self.custom_name,
                        self.canonical_name,
@@ -317,10 +310,7 @@ class Namespace(Iterable, ComparableMixin, metaclass=MetaNamespace):
         if count >= 2 and not parts[0] and parts[1]:
             return parts[1].strip()
 
-        if parts[0]:
-            return parts[0].strip()
-
-        return False
+        return parts[0].strip() if parts[0] else False
 
 
 class NamespacesDict(Mapping):
@@ -355,11 +345,11 @@ class NamespacesDict(Mapping):
             try:
                 return self._namespaces[key]
             except KeyError:
-                raise KeyError('{} is not a known namespace. Maybe you should '
-                               'clear the api cache.'.format(key))
+                raise KeyError(
+                    f'{key} is not a known namespace. Maybe you should clear the api cache.'
+                )
 
-        namespace = self.lookup_name(key)
-        if namespace:
+        if namespace := self.lookup_name(key):
             return namespace
 
         return super().__getitem__(key)
@@ -375,8 +365,7 @@ class NamespacesDict(Mapping):
             if attr == 'MAIN':
                 return self[0]
 
-            namespace = self.lookup_name(attr)
-            if namespace:
+            if namespace := self.lookup_name(attr):
                 return namespace
 
         return self.__getattribute__(attr)
@@ -392,9 +381,7 @@ class NamespacesDict(Mapping):
         :param name: Name of the namespace.
         """
         name = Namespace.normalize_name(name)
-        if name is False:
-            return None
-        return self.lookup_normalized_name(name.lower())
+        return None if name is False else self.lookup_normalized_name(name.lower())
 
     def lookup_normalized_name(self, name: str) -> Namespace | None:
         """
@@ -462,8 +449,11 @@ class NamespacesDict(Mapping):
             return None
         name = name.lower()
 
-        for namespace in self._namespaces.values():
-            if namespace._contains_lowercase_name(name):
-                return namespace
-
-        return None
+        return next(
+            (
+                namespace
+                for namespace in self._namespaces.values()
+                if namespace._contains_lowercase_name(name)
+            ),
+            None,
+        )

@@ -82,11 +82,10 @@ class BaseUnlinkBot(ExistingPageBot, AutomaticTWSummaryBot):
             try:
                 text = replace_links(text, unlink_callback, target_page.site)
             except EditReplacementError:
-                new_text = TextEditor().edit(
+                if new_text := TextEditor().edit(
                     unlink_callback.current_text,
-                    jumpIndex=unlink_callback.current_range[0])
-                # if user didn't press Cancel
-                if new_text:
+                    jumpIndex=unlink_callback.current_range[0],
+                ):
                     text = new_text
                 else:
                     text = unlink_callback.current_text

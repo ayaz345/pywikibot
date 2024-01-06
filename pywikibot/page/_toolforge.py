@@ -34,8 +34,8 @@ class WikiBlameMixin:
 
         if self.site.code not in self.WIKIBLAME_CODES:
             raise NotImplementedError(
-                'main_authors method is not implemented for wikipedia:{}'
-                .format(self.site.code))
+                f'main_authors method is not implemented for wikipedia:{self.site.code}'
+            )
 
         if self.namespace() != pywikibot.site.Namespace.MAIN:
             raise NotImplementedError(
@@ -82,8 +82,7 @@ class WikiBlameMixin:
 
         self._check_wh_supported()
 
-        url = baseurl + '/wiki/getauthors.php?wiki={}wiki&page_id={}'.format(
-            self.site.code, self.pageid)
+        url = f'{baseurl}/wiki/getauthors.php?wiki={self.site.code}wiki&page_id={self.pageid}'
         if onlynew:
             url += '&onlynew=1'
 

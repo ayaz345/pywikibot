@@ -53,9 +53,7 @@ class InformationBot(SingleSiteBot, ExistingPageBot):
     @staticmethod
     def detect_langs(text):
         """Detect language from griven text."""
-        if langdetect is not None:
-            return langdetect.detect_langs(text)
-        return None
+        return langdetect.detect_langs(text) if langdetect is not None else None
 
     def process_desc_template(self, template) -> bool:
         """Process description template."""
@@ -123,8 +121,7 @@ class InformationBot(SingleSiteBot, ExistingPageBot):
                 pywikibot.info('Empty description')
                 continue
             pywikibot.info(value)
-            langs = self.detect_langs(value)
-            if langs:
+            if langs := self.detect_langs(value):
                 pywikibot.info('<<lightblue>>Hints from langdetect:')
                 for language in langs:
                     pywikibot.info(
@@ -160,8 +157,7 @@ def main(*args: str) -> None:
     for arg in local_args:
         gen_factory.handle_arg(arg)
 
-    gen = gen_factory.getCombinedGenerator()
-    if gen:
+    if gen := gen_factory.getCombinedGenerator():
         bot = InformationBot(generator=gen)
         bot.run()
     else:

@@ -179,8 +179,7 @@ class MementoClient(OldMementoClient):
                 )
             except (requests.exceptions.ConnectTimeout,
                     requests.exceptions.ConnectionError):  # pragma: no cover
-                warning('Could not connect to URI {}, returning no native '
-                        'URI-G'.format(original_uri))
+                warning(f'Could not connect to URI {original_uri}, returning no native URI-G')
                 return None
 
             debug('Request headers sent to search for URI-G:  '
