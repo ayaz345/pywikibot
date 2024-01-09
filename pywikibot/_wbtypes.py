@@ -217,7 +217,7 @@ class Coordinate(WbRepresentation):
         """
         if self._dim is None and self._precision is None:
             return None
-        if self._precision is None and self._dim is not None:
+        if self._precision is None:
             radius = 6378137  # TODO: Support other globes
             self._precision = math.degrees(
                 self._dim / (radius * math.cos(math.radians(self.lat))))
@@ -252,7 +252,7 @@ class Coordinate(WbRepresentation):
         """
         if self._dim is None and self._precision is None:
             raise ValueError('No values set for dim or precision')
-        if self._dim is None and self._precision is not None:
+        if self._dim is None:
             radius = 6378137
             self._dim = int(
                 round(
@@ -426,9 +426,9 @@ class WbTime(WbRepresentation):
         if calendarmodel is None:
             if site is None:
                 site = pywikibot.Site().data_repository()
-                if site is None:
-                    raise ValueError(
-                        f'Site {pywikibot.Site()} has no data repository')
+            if site is None:
+                raise ValueError(
+                    f'Site {pywikibot.Site()} has no data repository')
             calendarmodel = site.calendarmodel()
         self.calendarmodel = calendarmodel
         # if precision is given it overwrites the autodetection above
@@ -469,8 +469,7 @@ class WbTime(WbRepresentation):
                         or (self.year % 4 == 0 and self.year % 100 != 0)
                         and self.month > 2):
                     elapsed_seconds += 24 * 60 * 60  # Leap year
-            # The julian calendar
-            if self.calendarmodel == 'http://www.wikidata.org/entity/Q1985786':
+            elif self.calendarmodel == 'http://www.wikidata.org/entity/Q1985786':
                 if self.year % 4 == 0 and self.month > 2:
                     elapsed_seconds += 24 * 60 * 60
         if self.day > 1:
@@ -644,19 +643,13 @@ class WbTime(WbRepresentation):
         elif self.precision == self.PRECISION['millenia']:
             # Similar situation with centuries
             year_float = year / 1000
-            if year_float < 0:
-                year = math.floor(year_float)
-            else:
-                year = math.ceil(year_float)
+            year = math.floor(year_float) if year_float < 0 else math.ceil(year_float)
             year *= 1000
         elif self.precision == self.PRECISION['century']:
             # For century, -1301 is the same century as -1400 but not -1401.
             # Similar for 1901 and 2000 vs 2001.
             year_float = year / 100
-            if year_float < 0:
-                year = math.floor(year_float)
-            else:
-                year = math.ceil(year_float)
+            year = math.floor(year_float) if year_float < 0 else math.ceil(year_float)
             year *= 100
         elif self.precision == self.PRECISION['decade']:
             # For decade, -1340 is the same decade as -1349 but not -1350.
@@ -741,14 +734,14 @@ class WbTime(WbRepresentation):
 
         :return: Wikibase JSON
         """
-        json = {'time': self.toTimestr(),
-                'precision': self.precision,
-                'after': self.after,
-                'before': self.before,
-                'timezone': self.timezone,
-                'calendarmodel': self.calendarmodel
-                }
-        return json
+        return {
+            'time': self.toTimestr(),
+            'precision': self.precision,
+            'after': self.after,
+            'before': self.before,
+            'timezone': self.timezone,
+            'calendarmodel': self.calendarmodel,
+        }
 
     @classmethod
     def fromWikibase(cls, data: dict[str, Any],
@@ -798,9 +791,7 @@ class WbQuantity(WbRepresentation):
         """
         if isinstance(value, Decimal):
             return value
-        if value is None:
-            return None
-        return Decimal(str(value))
+        return None if value is None else Decimal(str(value))
 
     @staticmethod
     def _fromdecimal(value: Decimal | None) -> str | None:
@@ -895,12 +886,12 @@ class WbQuantity(WbRepresentation):
 
         :return: Wikibase JSON
         """
-        json = {'amount': self._fromdecimal(self.amount),
-                'upperBound': self._fromdecimal(self.upperBound),
-                'lowerBound': self._fromdecimal(self.lowerBound),
-                'unit': self.unit
-                }
-        return json
+        return {
+            'amount': self._fromdecimal(self.amount),
+            'upperBound': self._fromdecimal(self.upperBound),
+            'lowerBound': self._fromdecimal(self.lowerBound),
+            'unit': self.unit,
+        }
 
     @classmethod
     def fromWikibase(cls, data: dict[str, Any],
@@ -918,10 +909,7 @@ class WbQuantity(WbRepresentation):
         error = None
         if bounds_provided or cls._require_errors(site):
             error = (upper_bound - amount, amount - lower_bound)
-        if data['unit'] == '1':
-            unit = None
-        else:
-            unit = data['unit']
+        unit = None if data['unit'] == '1' else data['unit']
         return cls(amount, unit, error, site)
 
 
@@ -948,10 +936,7 @@ class WbMonolingualText(WbRepresentation):
 
         :return: Wikibase JSON
         """
-        json = {'text': self.text,
-                'language': self.language
-                }
-        return json
+        return {'text': self.text, 'language': self.language}
 
     @classmethod
     def fromWikibase(cls, data: dict[str, Any],
@@ -1041,10 +1026,10 @@ class WbDataPage(WbRepresentation):
         # As we have already checked for existence the following simplified
         # check should be enough.
         if not page.title().startswith('Data:') \
-           or not page.title().endswith(ending):
+               or not page.title().endswith(ending):
             raise ValueError(
-                "Page must be in 'Data:' namespace and end in '{}' "
-                'for {}.'.format(ending, label))
+                f"Page must be in 'Data:' namespace and end in '{ending}' for {label}."
+            )
 
     def __init__(self,
                  page: pywikibot.Page,
@@ -1107,12 +1092,11 @@ class WbGeoShape(WbDataPage):
 
         :param site: The Wikibase site
         """
-        specifics = {
+        return {
             'ending': '.map',
             'label': 'geo-shape',
-            'data_site': cls._get_data_site(site)
+            'data_site': cls._get_data_site(site),
         }
-        return specifics
 
 
 class WbTabularData(WbDataPage):
@@ -1134,12 +1118,11 @@ class WbTabularData(WbDataPage):
 
         :param site: The Wikibase site
         """
-        specifics = {
+        return {
             'ending': '.tab',
             'label': 'tabular-data',
-            'data_site': cls._get_data_site(site)
+            'data_site': cls._get_data_site(site),
         }
-        return specifics
 
 
 class WbUnknown(WbRepresentation):

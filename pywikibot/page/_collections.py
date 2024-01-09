@@ -103,13 +103,12 @@ class LanguageDict(BaseDataDict):
         :param data: Data to normalize
         :return: The dict with normalized data
         """
-        norm_data = {}
-        for key, value in data.items():
-            if isinstance(value, str):
-                norm_data[key] = {'language': key, 'value': value}
-            else:
-                norm_data[key] = value
-        return norm_data
+        return {
+            key: {'language': key, 'value': value}
+            if isinstance(value, str)
+            else value
+            for key, value in data.items()
+        }
 
     def toJSON(self, diffto: dict | None = None) -> dict:
         """Create JSON suitable for Wikibase API.
@@ -119,10 +118,11 @@ class LanguageDict(BaseDataDict):
 
         :param diffto: JSON containing entity data
         """
-        data = {}
         diffto = diffto or {}
-        for key in diffto.keys() - self.keys():
-            data[key] = {'language': key, 'value': ''}
+        data = {
+            key: {'language': key, 'value': ''}
+            for key in diffto.keys() - self.keys()
+        }
         for key in self.keys() - diffto.keys():
             data[key] = {'language': key, 'value': self[key]}
         for key in self.keys() & diffto.keys():
@@ -160,19 +160,18 @@ class AliasesDict(BaseDataDict):
         """
         norm_data = {}
         for key, values in data.items():
-            if isinstance(values, list):
-                strings = []
-                for value in values:
-                    if isinstance(value, str):
-                        strings.append({'language': key, 'value': value})
-                    else:
-                        strings.append(value)
-                norm_data[key] = strings
-            else:
+            if not isinstance(values, list):
                 raise TypeError(
                     "Unsupported value type {!r} for '{}'; list expected."
                     .format(type(values).__name__, values))
 
+            strings = []
+            for value in values:
+                if isinstance(value, str):
+                    strings.append({'language': key, 'value': value})
+                else:
+                    strings.append(value)
+            norm_data[key] = strings
         return norm_data
 
     def toJSON(self, diffto: dict | None = None) -> dict:
@@ -183,13 +182,12 @@ class AliasesDict(BaseDataDict):
 
         :param diffto: JSON containing entity data
         """
-        data = {}
         diffto = diffto or {}
-        for lang in diffto.keys() & self.keys():
-            if (sorted(val['value'] for val in diffto[lang])
-                    != sorted(self[lang])):
-                data[lang] = [{'language': lang, 'value': i}
-                              for i in self[lang]]
+        data = {
+            lang: [{'language': lang, 'value': i} for i in self[lang]]
+            for lang in diffto.keys() & self.keys()
+            if (sorted(val['value'] for val in diffto[lang]) != sorted(self[lang]))
+        }
         for lang in diffto.keys() - self.keys():
             data[lang] = [
                 {'language': lang, 'value': i['value'], 'remove': ''}
@@ -263,11 +261,11 @@ class ClaimCollection(MutableMapping):
 
         :param diffto: JSON containing entity data
         """
-        claims = {}
-        for prop in self:
-            if self[prop]:
-                claims[prop] = [claim.toJSON() for claim in self[prop]]
-
+        claims = {
+            prop: [claim.toJSON() for claim in self[prop]]
+            for prop in self
+            if self[prop]
+        }
         if not diffto:
             return claims
 
@@ -352,9 +350,7 @@ class SiteLinkCollection(MutableMapping):
         :param site: The site to look up.
         :type site: pywikibot.site.BaseSite or str
         """
-        if isinstance(site, BaseSite):
-            return site.dbName()
-        return site
+        return site.dbName() if isinstance(site, BaseSite) else site
 
     def __getitem__(self, key):
         """
@@ -441,8 +437,8 @@ class SiteLinkCollection(MutableMapping):
                     json = {'site': key, 'title': json}
                 elif key != json['site']:
                     raise ValueError(
-                        "Key '{}' doesn't match the site of the value: '{}'"
-                        .format(key, json['site']))
+                        f"Key '{key}' doesn't match the site of the value: '{json['site']}'"
+                    )
                 norm_data[key] = json
         else:
             for obj in data:
@@ -473,14 +469,10 @@ class SiteLinkCollection(MutableMapping):
                     continue
                 diffto_link = diffto[dbname]
                 if diffto_link.get('title') == sitelink.get('title'):
-                    # compare badges
-                    tmp_badges = []
                     diffto_badges = diffto_link.get('badges', [])
                     badges = sitelink.get('badges', [])
-                    for badge in set(diffto_badges) - set(badges):
-                        tmp_badges.append('')
-                    for badge in set(badges) - set(diffto_badges):
-                        tmp_badges.append(badge)
+                    tmp_badges = ['' for _ in set(diffto_badges) - set(badges)]
+                    tmp_badges.extend(iter(set(badges) - set(diffto_badges)))
                     if tmp_badges:
                         data[dbname]['badges'] = tmp_badges
                     else:
@@ -520,11 +512,8 @@ class SubEntityCollection(MutableSequence):
     def _validate_isinstance(self, obj):
         if not isinstance(obj, self.type_class):
             raise TypeError(
-                '{} should only hold instances of {}, '
-                'instance of {} was provided'
-                .format(self.__class__.__name__,
-                        self.type_class.__name__,
-                        obj.__class__.__name__))
+                f'{self.__class__.__name__} should only hold instances of {self.type_class.__name__}, instance of {obj.__class__.__name__} was provided'
+            )
 
     def __getitem__(self, index):
         if isinstance(index, str):

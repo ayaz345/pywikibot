@@ -42,6 +42,4 @@ class Family(family.SubdomainFamily):
 
     def scriptpath(self, code):
         """Return the script path for this family."""
-        if code == 'nl':
-            return ''
-        return super().scriptpath(code)
+        return '' if code == 'nl' else super().scriptpath(code)

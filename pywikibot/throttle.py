@@ -224,11 +224,7 @@ class Throttle:
         into account of how much time has elapsed since the last access.
 
         """
-        if write:
-            thisdelay = self.writedelay
-        else:
-            thisdelay = self.delay
-
+        thisdelay = self.writedelay if write else self.delay
         # We're checking for multiple processes
         if time.time() > self.checktime + self.checkdelay:
             self.checkMultiplicity()

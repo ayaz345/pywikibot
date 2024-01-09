@@ -285,8 +285,7 @@ class CosmeticChangesToolkit:
             result = method(text)
         except Exception as e:
             if self.ignore == CANCEL.METHOD:
-                pywikibot.warning('Unable to perform "{}" on "{}"!'
-                                  .format(method.__name__, self.title))
+                pywikibot.warning(f'Unable to perform "{method.__name__}" on "{self.title}"!')
                 pywikibot.error(e)
             else:
                 raise
@@ -304,8 +303,7 @@ class CosmeticChangesToolkit:
             new_text = self._change(text)
         except Exception as e:
             if self.ignore == CANCEL.PAGE:
-                pywikibot.warning('Skipped "{}", because an error occurred.'
-                                  .format(self.title))
+                pywikibot.warning(f'Skipped "{self.title}", because an error occurred.')
                 pywikibot.error(e)
                 return False
             raise
@@ -321,8 +319,7 @@ class CosmeticChangesToolkit:
         Remove their language code prefix.
         """
         if not self.talkpage and pywikibot.calledModuleName() != 'interwiki':
-            interwikiR = re.compile(r'\[\[(?: *:)? *{} *: *([^\[\]\n]*)\]\]'
-                                    .format(self.site.code))
+            interwikiR = re.compile(f'\[\[(?: *:)? *{self.site.code} *: *([^\[\]\n]*)\]\]')
             text = interwikiR.sub(r'[[\1]]', text)
         return text
 
@@ -373,8 +370,7 @@ class CosmeticChangesToolkit:
             # TODO: Sort categories in alphabetic order, e.g. using
             # categories.sort()? (T100265)
             # TODO: Get main categories from Wikidata?
-            main = pywikibot.Category(self.site, 'Category:' + self.title,
-                                      sort_key=' ')
+            main = pywikibot.Category(self.site, f'Category:{self.title}', sort_key=' ')
             if main in categories:
                 categories.pop(categories.index(main))
                 categories.insert(0, main)
@@ -433,7 +429,7 @@ class CosmeticChangesToolkit:
             # lowerspaced and underscored namespaces
             for i, item in enumerate(namespaces):
                 item = item.replace(' ', '[ _]')
-                item = f'[{item[0]}{item[0].lower()}]' + item[1:]
+                item = f'[{item[0]}{item[0].lower()}]{item[1:]}'
                 namespaces[i] = item
             namespaces.append(first_lower(final_ns))
             if final_ns and namespaces:
@@ -444,18 +440,17 @@ class CosmeticChangesToolkit:
                                   'tif')
                     text = textlib.replaceExcept(
                         text,
-                        r'\[\[\s*({}) *:(?P<name>[^\|\]]*?\.({}))'
-                        r'(?P<label>.*?)\]\]'
-                        .format('|'.join(namespaces), '|'.join(extensions)),
-                        fr'[[{final_ns}:\g<name>\g<label>]]',
-                        exceptions)
+                        f"\[\[\s*({'|'.join(namespaces)}) *:(?P<name>[^\|\]]*?\.({'|'.join(extensions)}))(?P<label>.*?)\]\]",
+                        f'[[{final_ns}:\g<name>\g<label>]]',
+                        exceptions,
+                    )
                 else:
                     text = textlib.replaceExcept(
                         text,
-                        r'\[\[\s*({}) *:(?P<nameAndLabel>.*?)\]\]'
-                        .format('|'.join(namespaces)),
-                        fr'[[{final_ns}:\g<nameAndLabel>]]',
-                        exceptions)
+                        f"\[\[\s*({'|'.join(namespaces)}) *:(?P<nameAndLabel>.*?)\]\]",
+                        f'[[{final_ns}:\g<nameAndLabel>]]',
+                        exceptions,
+                    )
         return text
 
     def translateMagicWords(self, text: str) -> str:
@@ -631,7 +626,7 @@ class CosmeticChangesToolkit:
             #   text[[ title |name]]text   -> text[[title|name]]text
             #   text[[title| name]]text    -> text [[title|name]]text
             if hadLeadingSpaces and not newline:
-                newLink = ' ' + newLink
+                newLink = f' {newLink}'
             if hadTrailingSpaces:
                 newLink += ' '
             if newline:
@@ -676,13 +671,10 @@ class CosmeticChangesToolkit:
             8207,   # Right-to-left mark (&rtl;)
         ]
         if self.template:
-            ignore.append(32)  # Space ( )
-            ignore.append(58)  # Colon (:)
-        # TODO: T254350 - what other extension tags should be avoided?
-        # (graph, math, score, timeline, etc.)
-        text = pywikibot.html2unicode(
-            text, ignore=ignore, exceptions=['comment', 'syntaxhighlight'])
-        return text
+            ignore.extend((32, 58))
+        return pywikibot.html2unicode(
+            text, ignore=ignore, exceptions=['comment', 'syntaxhighlight']
+        )
 
     def removeEmptySections(self, text: str) -> str:
         """Cleanup empty sections."""
@@ -732,9 +724,9 @@ class CosmeticChangesToolkit:
                       'startspace', 'table']
         if self.site.sitename != 'wikipedia:cs':
             exceptions.append('template')
-        text = textlib.replaceExcept(text, r'(?m)[\t ]+( |$)', r'\1',
-                                     exceptions, site=self.site)
-        return text
+        return textlib.replaceExcept(
+            text, r'(?m)[\t ]+( |$)', r'\1', exceptions, site=self.site
+        )
 
     def removeNonBreakingSpaceBeforePercent(self, text: str) -> str:
         """
@@ -744,9 +736,9 @@ class CosmeticChangesToolkit:
         front of a percent sign, so it is no longer required to place it
         manually.
         """
-        text = textlib.replaceExcept(
-            text, r'(\d)&(?:nbsp|#160|#x[Aa]0);%', r'\1 %', ['timeline'])
-        return text
+        return textlib.replaceExcept(
+            text, r'(\d)&(?:nbsp|#160|#x[Aa]0);%', r'\1 %', ['timeline']
+        )
 
     def cleanUpSectionHeaders(self, text: str) -> str:
         """
@@ -801,15 +793,11 @@ class CosmeticChangesToolkit:
         builder = MultiTemplateMatchBuilder(self.site)
 
         if self.site.family.name in deprecatedTemplates \
-           and self.site.code in deprecatedTemplates[self.site.family.name]:
+               and self.site.code in deprecatedTemplates[self.site.family.name]:
             for template in deprecatedTemplates[
                     self.site.family.name][self.site.code]:
                 old, new = template
-                if new is None:
-                    new = ''
-                else:
-                    new = '{{%s}}' % new
-
+                new = '' if new is None else '{{%s}}' % new
                 text = textlib.replaceExcept(
                     text,
                     builder.pattern(old),
@@ -834,7 +822,7 @@ class CosmeticChangesToolkit:
             if match['title']:
                 replacement += '|' + match['title']
 
-            return replacement + ']]'
+            return f'{replacement}]]'
 
         exceptions = ['comment', 'math', 'nowiki', 'pre', 'startspace',
                       'syntaxhighlight']
@@ -1000,14 +988,15 @@ class CosmeticChangesToolkit:
         if self.site.code not in ['ckb', 'fa']:
             return text
 
+        digits = textlib.NON_LATIN_DIGITS
+        faChrs = 'ءاآأإئؤبپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیةيك' + digits['fa']
+
         exceptions: list[str | Pattern[str]] = [
             'file',
             'gallery',
             'hyperlink',
             'interwiki',
             'inputbox',
-            # FIXME: but changes letters inside wikilinks
-            # 'link',
             'math',
             'pre',
             'template',
@@ -1015,14 +1004,8 @@ class CosmeticChangesToolkit:
             'ref',
             'startspace',
             'syntaxhighlight',
+            re.compile('[^{fa}] *?"*? *?, *?[^{fa}]'.format(fa=faChrs)),
         ]
-
-        digits = textlib.NON_LATIN_DIGITS
-        faChrs = 'ءاآأإئؤبپتثجچحخدذرزژسشصضطظعغفقکگلمنوهیةيك' + digits['fa']
-
-        # not to let bot edits in latin content
-        exceptions.append(re.compile('[^{fa}] *?"*? *?, *?[^{fa}]'
-                                     .format(fa=faChrs)))
         text = textlib.replaceExcept(text, ',', '،', exceptions,
                                      site=self.site)
         if self.site.code == 'ckb':

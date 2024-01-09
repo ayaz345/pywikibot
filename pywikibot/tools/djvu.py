@@ -24,12 +24,7 @@ def _call_cmd(args, lib: str = 'djvulibre') -> tuple:
     :return: returns a tuple (res, stdoutdata), where
         res is True if dp.returncode != 0 else False
     """
-    if not isinstance(args, str):
-        # upcast any param in sequence args to str
-        cmd = ' '.join(str(a) for a in args)
-    else:
-        cmd = args
-
+    cmd = ' '.join(str(a) for a in args) if not isinstance(args, str) else args
     dp = subprocess.Popen(args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     stdoutdata, stderrdata = dp.communicate()
 
@@ -156,23 +151,20 @@ class DjVuFile:
                     has_text = True
 
                 if 'FORM:DJVU' in line:
-                    m = self._pat_form.search(line)
-                    if m:
+                    if m := self._pat_form.search(line):
                         key, id = int(m['n']), m['id']
                     else:
                         # If djvu doc has only one page,
                         # FORM:DJVU line in djvudump has no id
                         key, id = 1, ''
 
-                if 'INFO' in line:
-                    m = self._pat_info.search(line)
-                    if m:
-                        size, dpi = m['size'], int(m['dpi'])
-                    else:
-                        size, dpi = None, None
-                else:
+                if 'INFO' not in line:
                     continue
 
+                if m := self._pat_info.search(line):
+                    size, dpi = m['size'], int(m['dpi'])
+                else:
+                    size, dpi = None, None
                 self._page_info[key] = (id, (size, dpi))
             self._has_text = has_text
         return self._page_info
@@ -226,9 +218,7 @@ class DjVuFile:
             raise ValueError(f'Djvu file {self.file} has no text layer.')
         res, stdoutdata = _call_cmd(['djvutxt', f'--page={n}',
                                      self.file])
-        if not res:
-            return False
-        return self._remove_control_chars(stdoutdata)
+        return False if not res else self._remove_control_chars(stdoutdata)
 
     @check_page_number
     def whiten_page(self, n) -> bool:

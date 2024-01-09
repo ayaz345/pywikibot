@@ -80,12 +80,13 @@ class OptionSet(MutableMapping):
         if clear_invalid:
             self._enabled &= self._valid_enable
             self._disabled &= self._valid_disable
-        else:
-            invalid_names = ((self._enabled - self._valid_enable)
-                             | (self._disabled - self._valid_disable))
-            if invalid_names:
-                raise KeyError('OptionSet already contains invalid name(s) '
-                               '"{}"'.format('", "'.join(invalid_names)))
+        elif invalid_names := (
+            (self._enabled - self._valid_enable)
+            | (self._disabled - self._valid_disable)
+        ):
+            raise KeyError(
+                f"""OptionSet already contains invalid name(s) "{'", "'.join(invalid_names)}\""""
+            )
         self._site_set = True
 
     def from_dict(self, dictionary):
@@ -120,8 +121,9 @@ class OptionSet(MutableMapping):
             | (removed - self._valid_enable - self._valid_disable)
         )
         if invalid_names and self._site_set:
-            raise ValueError('Dict contains invalid name(s) "{}"'.format(
-                '", "'.join(invalid_names)))
+            raise ValueError(
+                f"""Dict contains invalid name(s) "{'", "'.join(invalid_names)}\""""
+            )
         self._enabled = enabled | (self._enabled - disabled - removed)
         self._disabled = disabled | (self._disabled - enabled - removed)
 

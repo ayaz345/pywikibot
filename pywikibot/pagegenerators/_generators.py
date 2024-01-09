@@ -455,15 +455,13 @@ def UserContributionsGenerator(username: str,
         site = pywikibot.Site()
 
     user = pywikibot.User(site, username)
-    if not (user.isAnonymous() or user.isRegistered()):
+    if not user.isAnonymous() and not user.isRegistered():
         pywikibot.warning(
             f'User "{user.username}" does not exist on site "{site}".')
 
     gen = (contrib[0] for contrib in user.contributions(
         namespaces=namespaces, total=total))
-    if _filter_unique:
-        return _filter_unique(gen)
-    return gen
+    return _filter_unique(gen) if _filter_unique else gen
 
 
 def NewimagesPageGenerator(total: int | None = None,
@@ -875,8 +873,7 @@ class GoogleSearchPageGenerator(GeneratorWrapper):
         base = f'http://{self.site.hostname()}{self.site.articlepath}'
         pattern = base.replace('{}', '(.+)')
         for url in self.queryGoogle(local_query):
-            m = re.search(pattern, url)
-            if m:
+            if m := re.search(pattern, url):
                 page = pywikibot.Page(pywikibot.Link(m[1], self.site))
                 if page.site == self.site:
                     yield page
@@ -918,8 +915,7 @@ def MySQLPageGenerator(query: str, site: BaseSite | None = None,
     for row in row_gen:
         namespace_number, page_name = row
         page_name = page_name.decode(site.encoding())
-        page = pywikibot.Page(site, page_name, ns=int(namespace_number))
-        yield page
+        yield pywikibot.Page(site, page_name, ns=int(namespace_number))
 
 
 class XMLDumpPageGenerator(abc.Iterator):  # type: ignore[type-arg]
@@ -1217,8 +1213,7 @@ class PetScanPageGenerator(GeneratorWrapper):
         if 'error' in data:
             raise APIError('Petscan', data['error'], **self.opts)
 
-        raw_pages = data['*'][0]['a']['*']
-        yield from raw_pages
+        yield from data['*'][0]['a']['*']
 
     @property
     def generator(self) -> Iterator[pywikibot.page.Page]:
@@ -1228,9 +1223,9 @@ class PetScanPageGenerator(GeneratorWrapper):
            changed from iterator method to generator property
         """
         for raw_page in self.query():
-            page = pywikibot.Page(self.site, raw_page['title'],
-                                  int(raw_page['namespace']))
-            yield page
+            yield pywikibot.Page(
+                self.site, raw_page['title'], int(raw_page['namespace'])
+            )
 
 
 class PagePilePageGenerator(GeneratorWrapper):
@@ -1253,14 +1248,7 @@ class PagePilePageGenerator(GeneratorWrapper):
         :param id: int
         :return: Dictionary of querystring parameters to use in the query
         """
-        query = {
-            'id': id,
-            'action': 'get_data',
-            'format': 'json',
-            'doit': ''
-        }
-
-        return query
+        return {'id': id, 'action': 'get_data', 'format': 'json', 'doit': ''}
 
     def query(self) -> Iterator[dict[str, Any]]:
         """Query PagePile.
@@ -1277,12 +1265,10 @@ class PagePilePageGenerator(GeneratorWrapper):
             raise APIError('PagePile', data['error'], **self.opts)
 
         self.site = pywikibot.site.APISite.fromDBName(data['wiki'])
-        raw_pages = data['pages']
-        yield from raw_pages
+        yield from data['pages']
 
     @property
     def generator(self) -> Iterator[pywikibot.page.Page]:
         """Yield results from :meth:`query`."""
         for raw_page in self.query():
-            page = pywikibot.Page(self.site, raw_page)
-            yield page
+            yield pywikibot.Page(self.site, raw_page)

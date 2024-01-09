@@ -329,10 +329,7 @@ class APISite(
         if not self.userinfo.get('name'):
             return False
 
-        if self.userinfo['name'] != self.username():
-            return False
-
-        return True
+        return self.userinfo['name'] == self.username()
 
     def is_oauth_token_available(self) -> bool:
         """Check whether OAuth token is set for this site."""
@@ -714,8 +711,9 @@ class APISite(
         elif isinstance(user, int):
             param = {'guiid': user}
         else:
-            raise TypeError("Inappropriate argument type of 'user' ({})"
-                            .format(type(user).__name__))
+            raise TypeError(
+                f"Inappropriate argument type of 'user' ({type(user).__name__})"
+            )
 
         if force or user not in self._globaluserinfo:
             param.update(
@@ -726,9 +724,9 @@ class APISite(
             uirequest = self.simple_request(**param)
             uidata = uirequest.submit()
             assert 'query' in uidata, \
-                   "API userinfo response lacks 'query' key"
+                       "API userinfo response lacks 'query' key"
             assert 'globaluserinfo' in uidata['query'], \
-                   "API userinfo response lacks 'globaluserinfo' key"
+                       "API userinfo response lacks 'globaluserinfo' key"
             data = uidata['query']['globaluserinfo']
             if 'missing' not in data:
                 ts = data['registration']
@@ -854,12 +852,6 @@ class APISite(
 
         :return: The linktrail regex.
         """
-        unresolved_linktrails = {
-            'br': '(?:[a-zA-ZàâçéèêîôûäëïöüùñÇÉÂÊÎÔÛÄËÏÖÜÀÈÙÑ]'
-                  "|[cC]['’]h|C['’]H)*",
-            'ca': "(?:[a-zàèéíòóúç·ïü]|'(?!'))*",
-            'kaa': "(?:[a-zıʼ’“»]|'(?!'))*",
-        }
         linktrail = self.siteinfo['general']['linktrail']
         if linktrail == '/^()(.*)$/sD':  # empty linktrail
             return ''
@@ -867,6 +859,12 @@ class APISite(
         match = re.search(r'\((?:\:\?|\?\:)?\[(?P<pattern>.+?)\]'
                           r'(?P<letters>(\|.)*)\)?\+\)', linktrail)
         if not match:
+            unresolved_linktrails = {
+                'br': '(?:[a-zA-ZàâçéèêîôûäëïöüùñÇÉÂÊÎÔÛÄËÏÖÜÀÈÙÑ]'
+                      "|[cC]['’]h|C['’]H)*",
+                'ca': "(?:[a-zàèéíòóúç·ïü]|'(?!'))*",
+                'kaa': "(?:[a-zıʼ’“»]|'(?!'))*",
+            }
             with suppress(KeyError):
                 return unresolved_linktrails[self.code]
             raise KeyError(f'"{self.code}": No linktrail pattern extracted '
@@ -1054,9 +1052,10 @@ class APISite(
         months = self.mediawiki_messages(months_long + months_short)
 
         self._months_names: list[tuple[str, str]] = []
-        for m_l, m_s in zip(months_long, months_short):
-            self._months_names.append((months[m_l], months[m_s]))
-
+        self._months_names.extend(
+            (months[m_l], months[m_s])
+            for m_l, m_s in zip(months_long, months_short)
+        )
         return self._months_names
 
     def list_to_text(self, args: typing.Iterable[str]) -> str:
@@ -1146,9 +1145,7 @@ class APISite(
             self._magicwords = {item['name']: item['aliases']
                                 for item in magicwords}
 
-        if word in self._magicwords:
-            return self._magicwords[word]
-        return [word]
+        return self._magicwords[word] if word in self._magicwords else [word]
 
     def redirects(self) -> list[str]:
         """Return a list of localized tags for the site without preceding '#'.
@@ -1188,7 +1185,7 @@ class APISite(
                 nsdata['case'] = default_case or self.siteinfo['case']
             elif default_case is not None:
                 assert default_case == nsdata['case'], \
-                    'Default case is not consistent'
+                        'Default case is not consistent'
 
             namespace = Namespace(ns, canonical_name, custom_name, **nsdata)
             _namespaces[ns] = namespace
@@ -1198,8 +1195,9 @@ class APISite(
             try:
                 namespace = _namespaces[ns]
             except KeyError:
-                pywikibot.warning('Broken namespace alias "{}" (id: {}) on {}'
-                                  .format(item['*'], ns, self))
+                pywikibot.warning(
+                    f"""Broken namespace alias "{item['*']}" (id: {ns}) on {self}"""
+                )
             else:
                 if item['*'] not in namespace:
                     namespace.aliases.append(item['*'])
@@ -1405,9 +1403,7 @@ class APISite(
             return the namespace name.
         :return: local name or Namespace object
         """
-        if all:
-            return self.namespaces[num]
-        return self.namespaces[num][0]
+        return self.namespaces[num] if all else self.namespaces[num][0]
 
     def _update_page(
         self,
@@ -1564,9 +1560,9 @@ class APISite(
         :raises ValueError: invalid action parameter
         """
         if action not in self.siteinfo.get('restrictions')['types']:
-            raise ValueError('{}.page_can_be_edited(): Invalid value "{}" for '
-                             '"action" parameter'
-                             .format(self.__class__.__name__, action))
+            raise ValueError(
+                f'{self.__class__.__name__}.page_can_be_edited(): Invalid value "{action}" for "action" parameter'
+            )
         prot_rights = {
             '': action,
             'autoconfirmed': 'editsemiprotected',
@@ -1643,7 +1639,7 @@ class APISite(
         if 'pages' not in result['query']:
             # No "pages" element might indicate a circular redirect
             # Check that a "to" link is also a "from" link in redirmap
-            for _from, _to in redirmap.items():
+            for _to in redirmap.values():
                 if _to['title'] in redirmap:
                     raise CircularRedirectError(page)
 
@@ -1752,13 +1748,15 @@ class APISite(
         data = req.submit()
         data = data.get('query', data)
 
-        user_tokens = {}
-        if 'tokens' in data and data['tokens']:
-            user_tokens = {removesuffix(key, 'token'): val
-                           for key, val in data['tokens'].items()
-                           if val != '+\\'}
-
-        return user_tokens
+        return (
+            {
+                removesuffix(key, 'token'): val
+                for key, val in data['tokens'].items()
+                if val != '+\\'
+            }
+            if 'tokens' in data and data['tokens']
+            else {}
+        )
 
     @property
     def tokens(self) -> pywikibot.site._tokenwallet.TokenWallet:
@@ -2023,15 +2021,13 @@ class APISite(
             False and saving the page requires solving a captcha
         """
         basetimestamp = True
-        text_overrides = self._ep_text_overrides.intersection(kwargs.keys())
-
-        if text_overrides:
+        if text_overrides := self._ep_text_overrides.intersection(kwargs.keys()):
             if 'text' in kwargs:
-                raise ValueError('text cannot be used with any of {}'
-                                 .format(', '.join(text_overrides)))
+                raise ValueError(
+                    f"text cannot be used with any of {', '.join(text_overrides)}"
+                )
             if len(text_overrides) > 1:
-                raise ValueError('Multiple text overrides used: {}'
-                                 .format(', '.join(text_overrides)))
+                raise ValueError(f"Multiple text overrides used: {', '.join(text_overrides)}")
             text = None
             basetimestamp = False
         elif 'text' in kwargs:
@@ -2139,10 +2135,7 @@ class APISite(
 
                         if 'url' in captcha:
                             import webbrowser
-                            webbrowser.open('{}://{}{}'
-                                            .format(self.protocol(),
-                                                    self.hostname(),
-                                                    captcha['url']))
+                            webbrowser.open(f"{self.protocol()}://{self.hostname()}{captcha['url']}")
                             req['captchaword'] = pywikibot.input(
                                 'Please view CAPTCHA in your browser, '
                                 'then type answer here:')
@@ -2158,9 +2151,8 @@ class APISite(
 
                     if 'code' in result['edit'] and 'info' in result['edit']:
                         pywikibot.error(
-                            'editpage: {}\n{}, '
-                            .format(result['edit']['code'],
-                                    result['edit']['info']))
+                            f"editpage: {result['edit']['code']}\n{result['edit']['info']}, "
+                        )
                         break
 
                     pywikibot.error(
@@ -2168,8 +2160,8 @@ class APISite(
                     break
 
                 pywikibot.error(
-                    "editpage: Unknown result code '{}' received; "
-                    'page not saved'.format(result['edit']['result']))
+                    f"editpage: Unknown result code '{result['edit']['result']}' received; page not saved"
+                )
                 pywikibot.log(str(result))
                 break
 
@@ -2347,7 +2339,7 @@ class APISite(
         newlink = pywikibot.Link(newtitle, self)
         newpage = pywikibot.Page(newlink)
         if newlink.namespace:
-            newtitle = self.namespace(newlink.namespace) + ':' + newlink.title
+            newtitle = f'{self.namespace(newlink.namespace)}:{newlink.title}'
         else:
             newtitle = newlink.title
         if oldtitle == newtitle:
@@ -2540,9 +2532,8 @@ class APISite(
         :raises TypeError, ValueError: page has wrong type/value.
         """
         if oldimage and isinstance(page, pywikibot.page.BasePage) \
-           and not isinstance(page, pywikibot.FilePage):
-            raise TypeError("'page' must be a FilePage not a '{}'"
-                            .format(page.__class__.__name__))
+               and not isinstance(page, pywikibot.FilePage):
+            raise TypeError(f"'page' must be a FilePage not a '{page.__class__.__name__}'")
 
         token = self.tokens['csrf']
         params = {
@@ -2724,9 +2715,11 @@ class APISite(
         token = self.tokens['csrf']
         self.lock_page(page)
 
-        protections_list = [ptype + '=' + level
-                            for ptype, level in protections.items()
-                            if level is not None]
+        protections_list = [
+            f'{ptype}={level}'
+            for ptype, level in protections.items()
+            if level is not None
+        ]
         parameters = merge_unique_dicts(kwargs, action='protect', title=page,
                                         token=token,
                                         protections=protections_list,
@@ -2896,7 +2889,7 @@ class APISite(
             pywikibot.error(
                 f'purgepages: Unexpected API response:\n{result}')
             return False
-        if not all('purged' in page for page in result):
+        if any('purged' not in page for page in result):
             return False
         if forcelinkupdate or forcerecursivelinkupdate:
             return all('linkupdate' in page for page in result)

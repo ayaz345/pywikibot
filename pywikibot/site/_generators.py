@@ -159,7 +159,7 @@ class GeneratorsMixin:
             rvgen.set_maximum_items(-1)  # suppress use of "rvlimit" parameter
 
             if len(pageids) == len(batch) \
-               and len(set(pageids)) <= self.maxlimit:
+                   and len(set(pageids)) <= self.maxlimit:
                 # only use pageids if all pages have them
                 rvgen.request['pageids'] = set(pageids)
             else:
@@ -185,8 +185,8 @@ class GeneratorsMixin:
                                 break
                         else:
                             pywikibot.warning(
-                                'preloadpages: Query returned unexpected '
-                                "title '{}'".format(pagedata['title']))
+                                f"preloadpages: Query returned unexpected title '{pagedata['title']}'"
+                            )
                             continue
 
                 except KeyError:
@@ -1121,7 +1121,7 @@ class GeneratorsMixin:
                                 fato=end,
                                 total=total)
         for k, v in kwargs.items():
-            fagen.request['fa' + k] = v
+            fagen.request[f'fa{k}'] = v
         if reverse:
             fagen.request['fadir'] = 'descending'
         return fagen
@@ -1443,11 +1443,15 @@ class GeneratorsMixin:
         """
         if not namespaces and namespaces != 0:
             namespaces = [ns_id for ns_id in self.namespaces if ns_id >= 0]
-        srgen = self._generator(api.PageGenerator, type_arg='search',
-                                gsrsearch=searchstring, gsrwhat=where,
-                                namespaces=namespaces,
-                                total=total, g_content=content)
-        return srgen
+        return self._generator(
+            api.PageGenerator,
+            type_arg='search',
+            gsrsearch=searchstring,
+            gsrwhat=where,
+            namespaces=namespaces,
+            total=total,
+            g_content=content,
+        )
 
     def usercontribs(self, user=None, userprefix=None, start=None, end=None,
                      reverse: bool = False, namespaces=None, minor=None,
@@ -1563,12 +1567,15 @@ class GeneratorsMixin:
         err = f'{msg_prefix}: User:{self.user()} not authorized to view '
         if not self.has_right('deletedhistory'):
             if self.mw_version < '1.34':
-                raise UserRightsError(err + 'deleted revisions.')
+                raise UserRightsError(f'{err}deleted revisions.')
             if 'comment' in prop or 'parsedcomment' in prop:
-                raise UserRightsError(err + 'comments of deleted revisions.')
-        if ('content' in prop and not (self.has_right('deletedtext')
-                                       or self.has_right('undelete'))):
-            raise UserRightsError(err + 'deleted content.')
+                raise UserRightsError(f'{err}comments of deleted revisions.')
+        if (
+            'content' in prop
+            and not self.has_right('deletedtext')
+            and not self.has_right('undelete')
+        ):
+            raise UserRightsError(f'{err}deleted content.')
 
     def deletedrevs(self, titles=None, start=None, end=None,
                     reverse: bool = False,
@@ -1633,7 +1640,7 @@ class GeneratorsMixin:
 
         # handle other parameters like user
         for k, v in kwargs.items():
-            gen.request['drv' + k] = v
+            gen.request[f'drv{k}'] = v
 
         for data in gen:
             with suppress(KeyError):
@@ -1679,7 +1686,7 @@ class GeneratorsMixin:
                                           kwargs['end'],
                                           reverse)
         prop = kwargs.pop('prop', [])
-        parameters = {'adr' + k: v for k, v in kwargs.items()}
+        parameters = {f'adr{k}': v for k, v in kwargs.items()}
         if not prop:
             prop = ['ids', 'timestamp', 'flags', 'user']
             if self.has_right('deletedhistory'):
@@ -1706,10 +1713,9 @@ class GeneratorsMixin:
         """
         usprop = ['blockinfo', 'gender', 'groups', 'editcount', 'registration',
                   'rights', 'emailable']
-        usgen = api.ListGenerator(
-            'users', site=self, parameters={
-                'ususers': usernames, 'usprop': usprop})
-        return usgen
+        return api.ListGenerator(
+            'users', site=self, parameters={'ususers': usernames, 'usprop': usprop}
+        )
 
     def randompages(self, total: int | None = None, namespaces=None,
                     redirects: bool | None = False, content: bool = False):
@@ -1830,8 +1836,7 @@ class GeneratorsMixin:
                 if err.code in self._patrol_errors:
                     raise Error(self._patrol_errors[err.code]
                                 .format_map(errdata))
-                pywikibot.debug("protect: Unexpected error code '{}' received."
-                                .format(err.code))
+                pywikibot.debug(f"protect: Unexpected error code '{err.code}' received.")
                 raise
 
             yield result['patrol']

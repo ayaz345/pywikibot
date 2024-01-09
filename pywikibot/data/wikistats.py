@@ -86,7 +86,7 @@ class WikiStats:
             return self._data[table]
 
         if table not in self.ALL_KEYS:
-            pywikibot.warning('WikiStats unknown table ' + table)
+            pywikibot.warning(f'WikiStats unknown table {table}')
 
         table = self.FAMILY_MAPPING.get(table, table)
         path = '/api.php?action=dump&table={table}&format=csv'

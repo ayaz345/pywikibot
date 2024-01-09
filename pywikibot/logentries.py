@@ -39,8 +39,9 @@ class LogEntry(UserDict):
         self.site = site
         expected_type = self._expected_type
         if expected_type is not None and expected_type != self.type():
-            raise Error('Wrong log type! Expecting {}, received {} instead.'
-                        .format(expected_type, self.type()))
+            raise Error(
+                f'Wrong log type! Expecting {expected_type}, received {self.type()} instead.'
+            )
 
     def __missing__(self, key: str) -> None:
         """Debug when the key is missing.
@@ -61,9 +62,8 @@ class LogEntry(UserDict):
         for hidden_key, hidden_types in hidden.items():
             if hidden_key in self and key in hidden_types:
                 raise HiddenKeyError(
-                    "Log entry ({}) has a hidden '{}' key and you don't have "
-                    "permission to view it due to '{}'"
-                    .format(self['type'], key, hidden_key))
+                    f"Log entry ({self['type']}) has a hidden '{key}' key and you don't have permission to view it due to '{hidden_key}'"
+                )
 
         raise KeyError(f"Log entry ({self['type']}) has no {key!r} key")
 
@@ -79,16 +79,16 @@ class LogEntry(UserDict):
     def __eq__(self, other: Any) -> bool:
         """Compare if self is equal to other."""
         if not isinstance(other, LogEntry):
-            pywikibot.debug("'{}' cannot be compared with '{}'"
-                            .format(type(self).__name__, type(other).__name__))
+            pywikibot.debug(
+                f"'{type(self).__name__}' cannot be compared with '{type(other).__name__}'"
+            )
             return False
 
         return self.logid() == other.logid() and self.site == other.site
 
     def __getattr__(self, item: str) -> Any:
         """Return several items from dict used as methods."""
-        if item in ('action', 'comment', 'logid', 'ns', 'pageid', 'type',
-                    'user'):  # TODO use specific User class for 'user'?
+        if item in {'action', 'comment', 'logid', 'ns', 'pageid', 'type', 'user'}:  # TODO use specific User class for 'user'?
             return lambda: self[item]
 
         return super().__getattribute__(item)
@@ -165,10 +165,7 @@ class BlockEntry(LogEntry):
             the removal of an autoblock
         """
         # TODO what for IP ranges ?
-        if self.isAutoblockRemoval:
-            return self._blockid
-
-        return super().page()
+        return self._blockid if self.isAutoblockRemoval else super().page()
 
     @cached
     def flags(self) -> list[str]:
@@ -179,10 +176,7 @@ class BlockEntry(LogEntry):
 
         :return: list of flags strings
         """
-        if self.action() == 'unblock':
-            return []
-
-        return self._params.get('flags', [])
+        return [] if self.action() == 'unblock' else self._params.get('flags', [])
 
     @cached
     def duration(self) -> datetime.timedelta | None:
@@ -365,7 +359,7 @@ class LogEntryFactory:
             if logtype is None:
                 cls._logtypes[logtype] = OtherLogEntry
             else:
-                if logtype in ('newusers', 'thanks'):
+                if logtype in {'newusers', 'thanks'}:
                     bases = (UserTargetLogEntry, OtherLogEntry)
                 else:
                     bases = (OtherLogEntry,)

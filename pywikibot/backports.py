@@ -77,7 +77,7 @@ else:
 
 # PEP 616 string methods
 if PYTHON_VERSION < (3, 9) or SPHINX_RUNNING:
-    def removeprefix(string: str, prefix: str) -> str:  # skipcq: TYP-053
+    def removeprefix(string: str, prefix: str) -> str:    # skipcq: TYP-053
         """Remove prefix from a string or return a copy otherwise.
 
         >>> removeprefix('TestHook', 'Test')
@@ -90,11 +90,9 @@ if PYTHON_VERSION < (3, 9) or SPHINX_RUNNING:
            backported from Python 3.9.
         .. versionadded:: 5.4
         """
-        if string.startswith(prefix):
-            return string[len(prefix):]
-        return string
+        return string[len(prefix):] if string.startswith(prefix) else string
 
-    def removesuffix(string: str, suffix: str) -> str:  # skipcq: TYP-053
+    def removesuffix(string: str, suffix: str) -> str:    # skipcq: TYP-053
         """Remove suffix from a string or return a copy otherwise.
 
         >>> removesuffix('MiscTests', 'Tests')
@@ -107,9 +105,7 @@ if PYTHON_VERSION < (3, 9) or SPHINX_RUNNING:
            backported from Python 3.9.
         .. versionadded:: 5.4
         """
-        if string.endswith(suffix):
-            return string[:-len(suffix)]
-        return string
+        return string[:-len(suffix)] if string.endswith(suffix) else string
 else:
     removeprefix = str.removeprefix  # type: ignore[assignment]
     removesuffix = str.removesuffix  # type: ignore[assignment]

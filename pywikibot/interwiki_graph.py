@@ -45,11 +45,12 @@ class GraphSavingThread(threading.Thread):
         """Write graphs to the data directory."""
         for fmt in config.interwiki_graph_formats:
             filename = config.datafilepath(
-                'interwiki-graphs/' + getFilename(self.origin, fmt))
+                f'interwiki-graphs/{getFilename(self.origin, fmt)}'
+            )
             if self.graph.write(filename, prog='dot', format=fmt):
-                pywikibot.info('Graph saved as ' + filename)
+                pywikibot.info(f'Graph saved as {filename}')
             else:
-                pywikibot.info('Graph could not be saved as ' + filename)
+                pywikibot.info(f'Graph could not be saved as {filename}')
 
 
 class Subject:
@@ -150,13 +151,9 @@ class GraphDrawer:
             targetLabel = self.getLabel(page)
             edge = pydot.Edge(sourceLabel, targetLabel)
 
-            oppositeEdge = self.graph.get_edge(targetLabel, sourceLabel)
-            if oppositeEdge:
+            if oppositeEdge := self.graph.get_edge(targetLabel, sourceLabel):
                 oppositeEdge = oppositeEdge[0]
                 oppositeEdge.set_dir('both')
-            # workaround for sf.net bug 401: prevent duplicate edges
-            # (it is unclear why duplicate edges occur)
-            # https://sourceforge.net/p/pywikipediabot/bugs/401/
             elif self.graph.get_edge(sourceLabel, targetLabel):
                 pywikibot.error(
                     f'Tried to create duplicate edge from {refPage} to {page}')

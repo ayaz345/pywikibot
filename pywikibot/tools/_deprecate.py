@@ -157,10 +157,7 @@ def add_full_name(obj):
             return obj(outer_args[0])
         return inner_wrapper
 
-    if not __debug__:
-        return obj  # pragma: no cover
-
-    return outer_wrapper
+    return obj if not __debug__ else outer_wrapper
 
 
 def _build_msg_string(instead: str | None, since: str | None) -> str:
@@ -181,7 +178,7 @@ def _build_msg_string(instead: str | None, since: str | None) -> str:
         msg = '{{0}} is deprecated{since}; use {{1}} instead.'
     else:
         msg = '{{0}} is deprecated{since}.'
-    return msg.format(since=' since release ' + since if since else '')
+    return msg.format(since=f' since release {since}' if since else '')
 
 
 def issue_deprecation_warning(name: str,
@@ -253,7 +250,7 @@ def deprecated(*args, **kwargs):
             """Add a Deprecated notice to the docstring."""
             deprecation_notice = 'Deprecated'
             if instead:
-                deprecation_notice += '; use ' + instead + ' instead'
+                deprecation_notice += f'; use {instead} instead'
             deprecation_notice += '.\n\n'
             if wrapper.__doc__:  # Append old docstring after the notice
                 wrapper.__doc__ = deprecation_notice + wrapper.__doc__
@@ -270,7 +267,9 @@ def deprecated(*args, **kwargs):
                                        re.IGNORECASE)
 
         # Add the deprecation notice to the docstring if not present
-        if not (wrapper.__doc__ and deprecated_notice.search(wrapper.__doc__)):
+        if not wrapper.__doc__ or not deprecated_notice.search(
+            wrapper.__doc__
+        ):
             add_docstring(wrapper)
         else:
             # Get docstring up to :params so deprecation notices for
@@ -295,11 +294,7 @@ def deprecated(*args, **kwargs):
 
     # When called as @deprecated, return a replacement function
     if without_parameters:
-        if not __debug__:
-            return args[0]  # pragma: no cover
-
-        return decorator(args[0])
-
+        return args[0] if not __debug__ else decorator(args[0])
     # Otherwise return a decorator, which returns a replacement function
     return decorator
 
@@ -543,15 +538,12 @@ def redirect_func(target, *,
     else:
         source_module = sys._getframe(1).f_globals['__name__'] + '.'
     if class_name:
-        target_module += class_name + '.'
-        source_module += class_name + '.'
+        target_module += f'{class_name}.'
+        source_module += f'{class_name}.'
     old_name = source_module + (old_name or target.__name__)
     new_name = target_module + target.__name__
 
-    if not __debug__:
-        return target
-
-    return call
+    return target if not __debug__ else call
 
 
 class ModuleDeprecationWrapper(types.ModuleType):
@@ -610,17 +602,16 @@ class ModuleDeprecationWrapper(types.ModuleType):
                 f'Module has already an attribute named "{name}".')
 
         if replacement_name is None:
-            if hasattr(replacement, '__name__'):
-                replacement_name = replacement.__module__
-                if hasattr(replacement, '__self__'):
-                    replacement_name += '.'
-                    replacement_name += replacement.__self__.__class__.__name__
-                replacement_name += '.' + replacement.__name__
-            else:
+            if not hasattr(replacement, '__name__'):
                 raise TypeError('Replacement must have a __name__ attribute '
                                 'or a replacement name must be set '
                                 'specifically.')
 
+            replacement_name = replacement.__module__
+            if hasattr(replacement, '__self__'):
+                replacement_name += '.'
+                replacement_name += replacement.__self__.__class__.__name__
+            replacement_name += f'.{replacement.__name__}'
         if not warning_message:
             warning_message = _build_msg_string(
                 replacement_name, since).format('{0}.{1}', '{2}')

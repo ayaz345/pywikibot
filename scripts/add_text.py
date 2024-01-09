@@ -135,10 +135,9 @@ class AddTextBot(AutomaticTWSummaryBot, ExistingPageBot):
 
             if self.opt.regex_skip_url:
                 url = page.full_url()
-                result = re.findall(self.opt.regex_skip_url,
-                                    page.site.getUrl(url))
-
-                if result:
+                if result := re.findall(
+                    self.opt.regex_skip_url, page.site.getUrl(url)
+                ):
                     pywikibot.warning(
                         f'Skipping {page} because -excepturl matches {result}.'
                     )

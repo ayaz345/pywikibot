@@ -68,8 +68,8 @@ class FlowPage(BasePage, abc.ABC):
         """Get the page's content."""
         if get_redirect or force:
             raise NotImplementedError(
-                "Neither 'force' nor 'get_redirect' parameter is implemented "
-                'in {}.get()'.format(self.__class__.__name__))
+                f"Neither 'force' nor 'get_redirect' parameter is implemented in {self.__class__.__name__}.get()"
+            )
 
         # TODO: Return more useful data
         return getattr(self, '_data', {})
@@ -151,9 +151,7 @@ class Board(FlowPage):
         count = 0
         while data['roots']:
             for root in data['roots']:
-                topic = Topic.from_topiclist_data(self, root, data)
-                yield topic
-
+                yield Topic.from_topiclist_data(self, root, data)
                 count += 1
                 if count >= total:
                     return
@@ -228,7 +226,7 @@ class Topic(FlowPage):
         if not isinstance(root_uuid, str):
             raise TypeError('Topic/root UUID must be a string.')
 
-        topic = cls(board.site, 'Topic:' + root_uuid)
+        topic = cls(board.site, f'Topic:{root_uuid}')
         topic._root = Post.fromJSON(topic, root_uuid, topiclist_data)
         topic._uuid = root_uuid
         return topic

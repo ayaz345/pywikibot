@@ -306,15 +306,15 @@ class PagesTagParser(collections.abc.Container):
             attribute = tag[begin:end - 1]
             attr, _, value = attribute.partition('=')
             if attr == 'from':
-                attr = 'f' + attr
+                attr = f'f{attr}'
             setattr(self, attr, value)
 
     @classmethod
     def get_descriptors(cls):
         """Get TagAttrDesc descriptors."""
-        res = {k: v for k, v in cls.__dict__.items()
-               if isinstance(v, TagAttrDesc)}
-        return res
+        return {
+            k: v for k, v in cls.__dict__.items() if isinstance(v, TagAttrDesc)
+        }
 
     def __contains__(self, attr):
         return getattr(self, attr) is not None
@@ -374,8 +374,7 @@ class FullHeader:
         self._text = text or ''
         self._has_div = True
 
-        m = self.p_header.search(self._text)
-        if m:
+        if m := self.p_header.search(self._text):
             self.ql = int(m['ql'])
             self.user = m['user']
             self.header = m['header']
@@ -453,19 +452,18 @@ class ProofreadPage(pywikibot.Page):
         :raise UnknownExtensionError: source Site has no ProofreadPage
             Extension.
         """
-        if not isinstance(source, pywikibot.site.BaseSite):
-            site = source.site
-        else:
-            site = source
+        site = source if isinstance(source, pywikibot.site.BaseSite) else source.site
         super().__init__(source, title)
         if self.namespace() != site.proofread_page_ns:
-            raise ValueError('Page {} must belong to {} namespace'
-                             .format(self.title(), site.proofread_page_ns))
+            raise ValueError(
+                f'Page {self.title()} must belong to {site.proofread_page_ns} namespace'
+            )
         # Ensure that constants are in line with Extension values.
         level_list = list(self.site.proofread_levels)
         if level_list != self.PROOFREAD_LEVELS:
-            raise ValueError('QLs do not match site values: {} != {}'
-                             .format(level_list, self.PROOFREAD_LEVELS))
+            raise ValueError(
+                f'QLs do not match site values: {level_list} != {self.PROOFREAD_LEVELS}'
+            )
 
         self._base, self._base_ext, self._num = self._parse_title()
         self._multi_page = self._base_ext in self._MULTI_PAGE_EXT
@@ -604,8 +602,9 @@ class ProofreadPage(pywikibot.Page):
     @decompose
     def ql(self, value: int) -> None:
         if value not in self.site.proofread_levels:
-            raise ValueError('Not valid QL value: {} (legal values: {})'
-                             .format(value, list(self.site.proofread_levels)))
+            raise ValueError(
+                f'Not valid QL value: {value} (legal values: {list(self.site.proofread_levels)})'
+            )
         # TODO: add logic to validate ql value change, considering
         # site.proofread_levels.
         self._full_header.ql = value
@@ -849,7 +848,7 @@ class ProofreadPage(pywikibot.Page):
         except (TypeError, AttributeError):
             raise ValueError(f'No prp-page-image src found for {self}.')
         else:
-            url_image = 'https:' + url_image
+            url_image = f'https:{url_image}'
 
         return url_image
 
@@ -1099,14 +1098,12 @@ class IndexPage(pywikibot.Page):
         if isinstance(BeautifulSoup, ImportError):
             raise BeautifulSoup
 
-        if not isinstance(source, pywikibot.site.BaseSite):
-            site = source.site
-        else:
-            site = source
+        site = source if isinstance(source, pywikibot.site.BaseSite) else source.site
         super().__init__(source, title)
         if self.namespace() != site.proofread_index_ns:
-            raise ValueError('Page {} must belong to {} namespace'
-                             .format(self.title(), site.proofread_index_ns))
+            raise ValueError(
+                f'Page {self.title()} must belong to {site.proofread_index_ns} namespace'
+            )
 
         self._all_page_links = {}
 
@@ -1146,10 +1143,7 @@ class IndexPage(pywikibot.Page):
         """Parse page title when link in Index is a redlink."""
         p_href = re.compile(
             r'/w/index\.php\?title=(.+?)&action=edit&redlink=1')
-        title = p_href.search(href)
-        if title:
-            return title[1].replace('_', ' ')
-        return None
+        return title[1].replace('_', ' ') if (title := p_href.search(href)) else None
 
     def save(self, *args: Any, **kwargs: Any) -> None:  # See Page.save().
         """
@@ -1183,11 +1177,7 @@ class IndexPage(pywikibot.Page):
 
         # Discard all inner templates as only top-level ones matter
         templates = textlib.extract_templates_and_params_regex_simple(text)
-        if len(templates) != 1 or templates[0][0] != self.INDEX_TEMPLATE:
-            # Only a single call to the INDEX_TEMPLATE is allowed
-            return False
-
-        return True
+        return len(templates) == 1 and templates[0][0] == self.INDEX_TEMPLATE
 
     def purge(self) -> None:  # type: ignore[override]
         """Overwrite purge method.
@@ -1242,8 +1232,8 @@ class IndexPage(pywikibot.Page):
             self._soup = _bs4_soup(self.get_parsed_page(True))  # type: ignore
             if not self._soup.find_all('a', attrs=attrs):
                 raise ValueError(
-                    'Missing class="qualityN prp-pagequality-N" or '
-                    'class="new" in: {}.'.format(self))
+                    f'Missing class="qualityN prp-pagequality-N" or class="new" in: {self}.'
+                )
 
         page_cnt = 0
         for a_tag in self._soup.find_all('a', attrs=attrs):
@@ -1330,8 +1320,9 @@ class IndexPage(pywikibot.Page):
             end = self.num_pages
 
         if not 1 <= start <= end <= self.num_pages:
-            raise ValueError('start={}, end={} are not in valid range (1, {})'
-                             .format(start, end, self.num_pages))
+            raise ValueError(
+                f'start={start}, end={end} are not in valid range (1, {self.num_pages})'
+            )
 
         # All but 'Without Text'
         if filter_ql is None:

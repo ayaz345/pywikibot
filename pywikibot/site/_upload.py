@@ -490,10 +490,11 @@ class Uploader:
                     return False
 
                 if len(result['warnings']) > 1:
-                    warn('The upload returned {} warnings: {}'
-                         .format(len(result['warnings']),
-                                 ', '.join(result['warnings'])),
-                         UserWarning, 3)
+                    warn(
+                        f"The upload returned {len(result['warnings'])} warnings: {', '.join(result['warnings'])}",
+                        UserWarning,
+                        3,
+                    )
                 warning = list(result['warnings'].keys())[0]
                 message = result['warnings'][warning]
                 warning = warning_keys.get(warning, warning)

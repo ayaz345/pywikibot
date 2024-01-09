@@ -152,7 +152,7 @@ def logoutput(msg: Any,
             msg = msg.decode('iso8859-1')
 
     layer = kwargs.pop('layer', '')
-    logger = logging.getLogger(('pywiki.' + layer).strip('.'))
+    logger = logging.getLogger(f'pywiki.{layer}'.strip('.'))
     logger.log(level, msg, extra=context, **kwargs)
 
 

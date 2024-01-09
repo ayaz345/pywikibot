@@ -43,7 +43,7 @@ class EchoMixin:
         }
 
         for key, value in kwargs.items():
-            params['not' + key] = value
+            params[f'not{key}'] = value
 
         data = self.simple_request(**params).submit()
         notifications = data['query']['notifications']['list']
@@ -100,26 +100,28 @@ class ProofreadPageMixin:
             self._proofread_page_ns and self._proofread_levels.
         :rtype: Namespace, Namespace, dict
         """
-        if (not hasattr(self, '_proofread_index_ns')
-                or not hasattr(self, '_proofread_page_ns')
-                or not hasattr(self, '_proofread_levels')):
+        if (
+            hasattr(self, '_proofread_index_ns')
+            and hasattr(self, '_proofread_page_ns')
+            and hasattr(self, '_proofread_levels')
+        ):
+            return
+        pirequest = self._request(
+            expiry=pywikibot.config.API_config_expiry
+            if expiry is False else expiry,
+            parameters={'action': 'query', 'meta': 'proofreadinfo'}
+        )
 
-            pirequest = self._request(
-                expiry=pywikibot.config.API_config_expiry
-                if expiry is False else expiry,
-                parameters={'action': 'query', 'meta': 'proofreadinfo'}
-            )
+        pidata = pirequest.submit()
+        ns_id = pidata['query']['proofreadnamespaces']['index']['id']
+        self._proofread_index_ns = self.namespaces[ns_id]
 
-            pidata = pirequest.submit()
-            ns_id = pidata['query']['proofreadnamespaces']['index']['id']
-            self._proofread_index_ns = self.namespaces[ns_id]
+        ns_id = pidata['query']['proofreadnamespaces']['page']['id']
+        self._proofread_page_ns = self.namespaces[ns_id]
 
-            ns_id = pidata['query']['proofreadnamespaces']['page']['id']
-            self._proofread_page_ns = self.namespaces[ns_id]
-
-            self._proofread_levels = {}
-            for ql in pidata['query']['proofreadqualitylevels']:
-                self._proofread_levels[ql['id']] = ql['category']
+        self._proofread_levels = {}
+        for ql in pidata['query']['proofreadqualitylevels']:
+            self._proofread_levels[ql['id']] = ql['category']
 
     @property
     def proofread_index_ns(self):
@@ -241,17 +243,16 @@ class GlobalUsageMixin:
             api.update_page(page, pageitem, query.props)
 
             assert 'globalusage' in pageitem, \
-                   "API globalusage response lacks 'globalusage' key"
+                       "API globalusage response lacks 'globalusage' key"
             for entry in pageitem['globalusage']:
                 try:
                     gu_site = pywikibot.Site(url=entry['url'])
                 except SiteDefinitionError:
                     pywikibot.warning(
-                        'Site could not be defined for global'
-                        ' usage for {}: {}.'.format(page, entry))
+                        f'Site could not be defined for global usage for {page}: {entry}.'
+                    )
                     continue
-                gu_page = pywikibot.Page(gu_site, entry['title'])
-                yield gu_page
+                yield pywikibot.Page(gu_site, entry['title'])
 
 
 class WikibaseClientMixin:

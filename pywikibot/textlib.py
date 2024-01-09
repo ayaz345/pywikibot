@@ -149,9 +149,9 @@ def to_latin_digits(phrase: str,
     elif isinstance(langs, str):
         langs = [langs]
 
-    digits = [NON_LATIN_DIGITS[key] for key in langs
-              if key in NON_LATIN_DIGITS]
-    if digits:
+    if digits := [
+        NON_LATIN_DIGITS[key] for key in langs if key in NON_LATIN_DIGITS
+    ]:
         trans = str.maketrans(''.join(digits), '0123456789' * len(digits))
         phrase = phrase.translate(trans)
     return phrase
@@ -215,8 +215,7 @@ class MultiTemplateMatchBuilder:
             r'((({{{[^{}]+?}}}|{{[^{}]+?}}|{[^{}]*?})[^{]*?)*?)?'
             r'|)\s*}}'
         ) % {'namespace': ':|'.join(namespaces), 'pattern': pattern}
-        templateRegex = re.compile(templateRegexP, flags)
-        return templateRegex
+        return re.compile(templateRegexP, flags)
 
     def search_any_predicate(self, templates):
         """Return a predicate that matches any template."""
@@ -259,54 +258,53 @@ def _create_default_regexes() -> None:
 
     :meta public:
     """
-    _regex_cache.update({
-        # categories
-        'category': (r'\[\[ *(?:%s)\s*:.*?\]\]',
-                     lambda site: '|'.join(site.namespaces[14])),
-        'comment': re.compile(r'<!--[\s\S]*?-->'),
-        # files
-        'file': (FILE_LINK_REGEX, lambda site: '|'.join(site.namespaces[6])),
-        # section headers
-        'header': re.compile(
-            r'(?:(?<=\n)|\A)(?:<!--[\s\S]*?-->)*'
-            r'(=(?:[^\n]|<!--[\s\S]*?-->)+=)'
-            r' *(?:<!--[\s\S]*?--> *)*(?=\n|\Z)'),
-        # external links
-        'hyperlink': compileLinkR(),
-        # also finds links to foreign sites with preleading ":"
-        'interwiki': (
-            r'\[\[:?(%s)\s?:[^\]]*\]\]\s*',
-            lambda site: '|'.join(
-                ignore_case(i) for i in site.validLanguageLinks()
-                + list(site.family.obsolete.keys()))),
-        # Module invocations (currently only Lua)
-        'invoke': (
-            r'\{\{\s*\#(?:%s):[\s\S]*?\}\}',
-            lambda site: '|'.join(
-                ignore_case(mw) for mw in site.getmagicwords('invoke'))),
-        # this matches internal wikilinks, but also interwiki, categories, and
-        # images.
-        'link': re.compile(r'\[\[[^\]|]*(\|[^\]]*)?\]\]'),
-        # pagelist tag (used in Proofread extension).
-        'pagelist': re.compile(r'<{}[\s\S]*?/>'
-                               .format(ignore_case('pagelist'))),
-        # Wikibase property inclusions
-        'property': (
-            r'\{\{\s*\#(?:%s):\s*[Pp]\d+.*?\}\}',
-            lambda site: '|'.join(
-                ignore_case(mw) for mw in site.getmagicwords('property'))),
-        # lines that start with a colon or more will be indented
-        'startcolon': re.compile(r'(?:(?<=\n)|\A):(.*?)(?=\n|\Z)'),
-        # lines that start with a space are shown in a monospace font and
-        # have whitespace preserved.
-        'startspace': re.compile(r'(?:(?<=\n)|\A) (.*?)(?=\n|\Z)'),
-        # tables often have whitespace that is used to improve wiki
-        # source code readability.
-        # TODO: handle nested tables.
-        'table': re.compile(
-            r'(?:(?<=\n)|\A){\|[\S\s]*?\n\|}|%s' % _tag_pattern('table')),
-        'template': NESTED_TEMPLATE_REGEX,
-    })
+    _regex_cache.update(
+        {
+            'category': (
+                r'\[\[ *(?:%s)\s*:.*?\]\]',
+                lambda site: '|'.join(site.namespaces[14]),
+            ),
+            'comment': re.compile(r'<!--[\s\S]*?-->'),
+            'file': (
+                FILE_LINK_REGEX,
+                lambda site: '|'.join(site.namespaces[6]),
+            ),
+            'header': re.compile(
+                r'(?:(?<=\n)|\A)(?:<!--[\s\S]*?-->)*'
+                r'(=(?:[^\n]|<!--[\s\S]*?-->)+=)'
+                r' *(?:<!--[\s\S]*?--> *)*(?=\n|\Z)'
+            ),
+            'hyperlink': compileLinkR(),
+            'interwiki': (
+                r'\[\[:?(%s)\s?:[^\]]*\]\]\s*',
+                lambda site: '|'.join(
+                    ignore_case(i)
+                    for i in site.validLanguageLinks()
+                    + list(site.family.obsolete.keys())
+                ),
+            ),
+            'invoke': (
+                r'\{\{\s*\#(?:%s):[\s\S]*?\}\}',
+                lambda site: '|'.join(
+                    ignore_case(mw) for mw in site.getmagicwords('invoke')
+                ),
+            ),
+            'link': re.compile(r'\[\[[^\]|]*(\|[^\]]*)?\]\]'),
+            'pagelist': re.compile(f"<{ignore_case('pagelist')}[\s\S]*?/>"),
+            'property': (
+                r'\{\{\s*\#(?:%s):\s*[Pp]\d+.*?\}\}',
+                lambda site: '|'.join(
+                    ignore_case(mw) for mw in site.getmagicwords('property')
+                ),
+            ),
+            'startcolon': re.compile(r'(?:(?<=\n)|\A):(.*?)(?=\n|\Z)'),
+            'startspace': re.compile(r'(?:(?<=\n)|\A) (.*?)(?=\n|\Z)'),
+            'table': re.compile(
+                r'(?:(?<=\n)|\A){\|[\S\s]*?\n\|}|%s' % _tag_pattern('table')
+            ),
+            'template': NESTED_TEMPLATE_REGEX,
+        }
+    )
 
 
 def get_regexes(
@@ -367,9 +365,7 @@ def get_regexes(
         elif exc == 'chem':
             result.append(_tag_regex('ce'))
         elif exc == 'math':
-            result.append(_tag_regex('chem'))
-            result.append(_tag_regex('ce'))
-
+            result.extend((_tag_regex('chem'), _tag_regex('ce')))
     return result
 
 
@@ -482,11 +478,7 @@ def replaceExcept(text: str,
         text = text[:match.start()] + replacement + text[match.end():]
 
         # continue the search on the remaining text
-        if allowoverlap:
-            index = match.start() + 1
-        else:
-            index = match.start() + len(replacement)
-
+        index = match.start() + 1 if allowoverlap else match.start() + len(replacement)
         if not match.group():
             # When the regex allows to match nothing, shift by one char
             index += 1
@@ -704,14 +696,10 @@ def replace_links(text: str, replace, site: pywikibot.site.BaseSite) -> str:
         """Return the link from source when it's a Page otherwise itself."""
         if isinstance(source, pywikibot.Page):
             return source._link
-        if isinstance(source, str):
-            return pywikibot.Link(source, site)
-        return source
+        return pywikibot.Link(source, site) if isinstance(source, str) else source
 
     def replace_callable(link, text, groups, rng):
-        if replace_list[0] == link:
-            return replace_list[1]
-        return None
+        return replace_list[1] if replace_list[0] == link else None
 
     def check_classes(replacement):
         """Normalize the replacement into a list."""
@@ -723,7 +711,7 @@ def replace_links(text: str, replace, site: pywikibot.site.BaseSite) -> str:
     def title_section(link) -> str:
         title = link.title
         if link.section:
-            title += '#' + link.section
+            title += f'#{link.section}'
         return title
 
     if not isinstance(site, pywikibot.site.BaseSite):
@@ -848,7 +836,7 @@ def replace_links(text: str, replace, site: pywikibot.site.BaseSite) -> str:
         new_title = new_link.canonical_title()
         # Make correct langlink if needed
         if new_link.site != site:
-            new_title = ':' + new_link.site.code + ':' + new_title
+            new_title = f':{new_link.site.code}:{new_title}'
 
         if is_link:
             # Use link's label
@@ -860,7 +848,7 @@ def replace_links(text: str, replace, site: pywikibot.site.BaseSite) -> str:
             new_section = groups['section']
 
         if new_section:
-            new_title += '#' + new_section
+            new_title += f'#{new_section}'
 
         if new_label is None:
             new_label = new_title
@@ -1153,11 +1141,7 @@ def getLanguageLinks(
     if fam.interwiki_forward:
         fam = Family.load(fam.interwiki_forward)
     result: dict[pywikibot.site.BaseSite, pywikibot.Page] = {}
-    # Ignore interwiki links within nowiki tags, includeonly tags, pre tags,
-    # and HTML comments
-    include = []
-    if template_subpage:
-        include = ['includeonly']
+    include = ['includeonly'] if template_subpage else []
     text = removeDisabledParts(text, include=include)
 
     # This regular expression will find every link that is possibly an
@@ -1218,8 +1202,9 @@ def removeLanguageLinks(text: str, site=None, marker: str = '') -> str:
                          + list(site.family.obsolete.keys()))
     if not languages:
         return text
-    interwikiR = re.compile(r'\[\[({})\s?:[^\[\]\n]*\]\][\s]*'
-                            .format(languages), re.IGNORECASE)
+    interwikiR = re.compile(
+        f'\[\[({languages})\s?:[^\[\]\n]*\]\][\s]*', re.IGNORECASE
+    )
     text = replaceExcept(text, interwikiR, '',
                          ['comment', 'math', 'nowiki', 'pre',
                           'syntaxhighlight'],
@@ -1403,10 +1388,7 @@ def interwikiFormat(links: dict, insite=None) -> str:
             s.append(link)
         else:
             raise ValueError('links dict must contain Page or Link objects')
-    if insite.code in insite.family.interwiki_on_one_line:
-        sep = ' '
-    else:
-        sep = '\n'
+    sep = ' ' if insite.code in insite.family.interwiki_on_one_line else '\n'
     return sep.join(s) + '\n'
 
 
@@ -1419,8 +1401,7 @@ def interwikiSort(sites, insite=None):
         insite = pywikibot.Site()
 
     sites.sort()
-    putfirst = insite.interwiki_putfirst()
-    if putfirst:
+    if putfirst := insite.interwiki_putfirst():
         # In this case I might have to change the order
         firstsites = []
         validlanglinks = insite.validLanguageLinks()
@@ -1454,18 +1435,16 @@ def getCategoryLinks(text: str, site=None,
     # and HTML comments
     text = removeDisabledParts(text, include=include or [])
     catNamespace = '|'.join(site.namespaces.CATEGORY)
-    R = re.compile(r'\[\[\s*(?P<namespace>{})\s*:\s*(?P<rest>.+?)\]\]'
-                   .format(catNamespace), re.I)
+    R = re.compile(
+        f'\[\[\s*(?P<namespace>{catNamespace})\s*:\s*(?P<rest>.+?)\]\]', re.I
+    )
     for match in R.finditer(text):
         match_rest = match['rest']
         if expand_text and '{{' in match_rest:
             rest = site.expand_text(match_rest)
         else:
             rest = match_rest
-        if '|' in rest:
-            title, sortKey = rest.split('|', 1)
-        else:
-            title, sortKey = rest, None
+        title, sortKey = rest.split('|', 1) if '|' in rest else (rest, None)
         try:
             cat = pywikibot.Category(site,
                                      f"{match['namespace']}:{title}",
@@ -1497,8 +1476,7 @@ def removeCategoryLinks(text: str, site=None, marker: str = '') -> str:
     if site is None:
         site = pywikibot.Site()
     catNamespace = '|'.join(site.namespaces.CATEGORY)
-    categoryR = re.compile(r'\[\[\s*({})\s*:.*?\]\]\s*'
-                           .format(catNamespace), re.I)
+    categoryR = re.compile(f'\[\[\s*({catNamespace})\s*:.*?\]\]\s*', re.I)
     text = replaceExcept(text, categoryR, '',
                          ['comment', 'includeonly', 'math', 'nowiki', 'pre',
                           'syntaxhighlight'],
@@ -1557,13 +1535,14 @@ def replaceCategoryInPlace(oldtext, oldcat, newcat, site=None,
 
     # title might contain regex special characters
     title = case_escape(site.namespaces[14].case, title, underscore=True)
-    categoryR = re.compile(r'\[\[\s*({})\s*:\s*{}[\s\u200e\u200f]*'
-                           r'((?:\|[^]]+)?\]\])'
-                           .format(catNamespace, title), re.I)
+    categoryR = re.compile(
+        f'\[\[\s*({catNamespace})\s*:\s*{title}[\s\u200e\u200f]*((?:\|[^]]+)?\]\])',
+        re.I,
+    )
     categoryRN = re.compile(
-        r'^[^\S\n]*\[\[\s*({})\s*:\s*{}[\s\u200e\u200f]*'
-        r'((?:\|[^]]+)?\]\])[^\S\n]*\n'
-        .format(catNamespace, title), re.I | re.M)
+        f'^[^\S\n]*\[\[\s*({catNamespace})\s*:\s*{title}[\s\u200e\u200f]*((?:\|[^]]+)?\]\])[^\S\n]*\n',
+        re.I | re.M,
+    )
     exceptions = ['comment', 'math', 'nowiki', 'pre', 'syntaxhighlight']
     if newcat is None:
         # First go through and try the more restrictive regex that removes
@@ -1834,10 +1813,7 @@ def extract_templates_and_params(
 
             if strip:
                 key = param.name.strip()
-                if explicit(param):
-                    value = param.value.strip()
-                else:
-                    value = str(param.value)
+                value = param.value.strip() if explicit(param) else str(param.value)
             else:
                 key = str(param.name)
 
@@ -1869,11 +1845,7 @@ def extract_templates_and_params_regex_simple(text: str):
         name, params = match[1], match[2]
 
         # Special case for {{a}}
-        if params is None:
-            params = []
-        else:
-            params = params.split('|')
-
+        params = [] if params is None else params.split('|')
         numbered_param_identifiers = itertools.count(1)
 
         params = OrderedDict(
@@ -1895,10 +1867,7 @@ def glue_template_and_params(template_and_params) -> str:
     of the params changes).
     """
     template, params = template_and_params
-    text = ''
-    for items in params.items():
-        text += '|{}={}\n'.format(*items)
-
+    text = ''.join('|{}={}\n'.format(*items) for items in params.items())
     return f'{{{{{template}\n{text}}}}}'
 
 
@@ -2014,13 +1983,12 @@ class TimeStripper:
         # the last one is workaround for Korean
         if any(month.isdigit() for month in self.origNames2monthNum):
             self.is_digit_month = True
-            monthR = r'(?P<month>({})|(?:1[012]|0?[1-9])\.)' \
-                     .format('|'.join(escaped_months))
+            monthR = f"(?P<month>({'|'.join(escaped_months)})|(?:1[012]|0?[1-9])\.)"
             dayR = r'(?P<day>(3[01]|[12]\d|0?[1-9]))(?:{})' \
-                   r'?\.?\s*(?:[01]?\d\.)?'.format('\uc77c')
+                       r'?\.?\s*(?:[01]?\d\.)?'.format('\uc77c')
         else:
             self.is_digit_month = False
-            monthR = r'(?P<month>({}))'.format('|'.join(escaped_months))
+            monthR = f"(?P<month>({'|'.join(escaped_months)}))"
             dayR = r'(?P<day>(3[01]|[12]\d|0?[1-9]))\.?'
 
         self.patterns = TimeStripperPatterns(
@@ -2163,9 +2131,7 @@ class TimeStripper:
             return False
         if min_pos < tzinfo_pos < max_pos:
             return False
-        if min_pos < time_pos < max_pos:
-            return False
-        return True
+        return not min_pos < time_pos < max_pos
 
     def timestripper(self, line: str) -> pywikibot.Timestamp | None:
         """

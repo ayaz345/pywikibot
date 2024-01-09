@@ -140,8 +140,9 @@ class UI(ABUIC):
 
     def encounter_color(self, color, target_stream):
         """Abstract method to handle the next color encountered."""
-        raise NotImplementedError('The {} class does not support '
-                                  'colors.'.format(self.__class__.__name__))
+        raise NotImplementedError(
+            f'The {self.__class__.__name__} class does not support colors.'
+        )
 
     @classmethod
     def divide_color(cls, color):
@@ -183,8 +184,8 @@ class UI(ABUIC):
             except AttributeError:
                 out, err = self.stdout, self.stderr
             raise OSError(
-                'Target stream {} is neither stdin ({}) nor stderr ({})'
-                .format(target_stream.name, out, err))
+                f'Target stream {target_stream.name} is neither stdin ({out}) nor stderr ({err})'
+            )
 
     def support_color(self, target_stream) -> bool:
         """Return whether the target stream does support colors."""
@@ -387,7 +388,7 @@ class UI(ABUIC):
 
             # TODO: make sure this is logged as well
             while True:
-                self.stream_output(question + ' ')
+                self.stream_output(f'{question} ')
                 text = self._input_reraise_cntl_c(password)
 
                 if text is None:
@@ -459,17 +460,13 @@ class UI(ABUIC):
         def output_option(option, before_question) -> None:
             """Print an OutputOption before or after question."""
             if isinstance(option, OutputOption) \
-               and option.before_question is before_question:
+                   and option.before_question is before_question:
                 self.stream_output(option.out + '\n')
 
         if force and not default:
             raise ValueError('With no default option it cannot be forced')
 
-        if isinstance(options, Option):
-            options = [options]
-        else:  # make a copy
-            options = list(options)
-
+        options = [options] if isinstance(options, Option) else list(options)
         if not options:
             raise ValueError('No options are given.')
         if automatic_quit:
@@ -518,9 +515,7 @@ class UI(ABUIC):
 
         if isinstance(answer, ChoiceException):
             raise answer
-        if not return_shortcut:
-            return index
-        return answer
+        return index if not return_shortcut else answer
 
     def input_list_choice(self, question: str, answers: Sequence[Any],
                           default: int | str | None = None,
@@ -645,6 +640,4 @@ class MaxLevelFilter():
 
     def filter(self, record):
         """Return true if the level is below or equal to the set level."""
-        if self.level:
-            return record.levelno <= self.level
-        return True
+        return record.levelno <= self.level if self.level else True

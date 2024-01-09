@@ -192,7 +192,7 @@ class XmlDump:
                 if event == 'start' and root is None:
                     root = elem
 
-                if not (event == 'end' and elem.tag == f'{self.uri}page'):
+                if event != 'end' or elem.tag != f'{self.uri}page':
                     continue
 
                 yield from self._parse(elem)
@@ -240,10 +240,7 @@ class XmlDump:
         uri = self.uri
         headers = self._headers(elem)
         for revision in elem.findall(f'{uri}revision'):
-            if with_id:
-                revid = int(revision.findtext(f'{uri}id'))
-            else:
-                revid = 0
+            revid = int(revision.findtext(f'{uri}id')) if with_id else 0
             yield RawRev(headers, revision, revid)
 
     @staticmethod
@@ -259,12 +256,10 @@ class XmlDump:
 
         edit_restriction, move_restriction = None, None
 
-        edit_lock_match = re.search('edit=([^:]*)', restrictions)
-        if edit_lock_match:
+        if edit_lock_match := re.search('edit=([^:]*)', restrictions):
             edit_restriction = edit_lock_match[1]
 
-        move_lock_match = re.search('move=([^:]*)', restrictions)
-        if move_lock_match:
+        if move_lock_match := re.search('move=([^:]*)', restrictions):
             move_restriction = move_lock_match[1]
 
         if restrictions == 'sysop':
@@ -280,7 +275,7 @@ class XmlDump:
             elem.findtext(f'{uri}restrictions')
         )
 
-        headers = Headers(
+        return Headers(
             title=elem.findtext(f'{uri}title'),
             ns=elem.findtext(f'{uri}ns'),
             pageid=elem.findtext(f'{uri}id'),
@@ -288,8 +283,6 @@ class XmlDump:
             edit_restriction=edit_restriction,
             move_restriction=move_restriction,
         )
-
-        return headers
 
     def _create_revision(
             self, headers: Headers, revision: Element
@@ -301,7 +294,7 @@ class XmlDump:
         username = ip_editor or contributor.findtext(f'{uri}username')
         username = username or ''  # username might be deleted
 
-        xml_entry = XmlEntry(
+        return XmlEntry(
             title=headers.title,
             ns=headers.ns,
             id=headers.pageid,
@@ -316,8 +309,6 @@ class XmlDump:
             comment=revision.findtext(f'{uri}comment'),
             # could get comment, minor as well
         )
-
-        return xml_entry
 
 
 wrapper = ModuleDeprecationWrapper(__name__)

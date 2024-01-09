@@ -72,10 +72,7 @@ class Revision(Mapping):
 
     def __getitem__(self, name: str):
         """Return a single Revision item given by name."""
-        if name in self._data:
-            return self._data[name]
-
-        return self.__missing__(name)
+        return self._data[name] if name in self._data else self.__missing__(name)
 
     # provide attribute access
     __getattr__ = __getitem__
@@ -95,5 +92,6 @@ class Revision(Mapping):
     def __missing__(self, key):
         """Provide backward compatibility for exceptions."""
         # raise AttributeError instead of KeyError for backward compatibility
-        raise AttributeError("'{}' object has no attribute '{}'"
-                             .format(self.__class__.__name__, key))
+        raise AttributeError(
+            f"'{self.__class__.__name__}' object has no attribute '{key}'"
+        )

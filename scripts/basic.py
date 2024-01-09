@@ -154,10 +154,8 @@ def main(*args: str) -> None:
         option = arg[1:]
         if option in ('summary', 'text'):
             if not value:
-                pywikibot.input('Please enter a value for ' + arg)
+                pywikibot.input(f'Please enter a value for {arg}')
             options[option] = value
-        # take the remaining options as booleans.
-        # You will get a hint if they aren't pre-defined in your bot class
         else:
             options[option] = True
 

@@ -191,8 +191,7 @@ def str2localized_duration(site, string: str) -> str:
         key, duration = parse_duration(string)
     except ValueError as e:
         raise MalformedConfigError(e) from None
-    template = site.mediawiki_message(MW_KEYS[key])
-    if template:
+    if template := site.mediawiki_message(MW_KEYS[key]):
         # replace plural variants
         exp = i18n.translate(site.code, template, {'$1': duration})
         return exp.replace('$1', to_local_digits(duration, site.code))
@@ -239,7 +238,7 @@ def template_title_regex(tpl_page: pywikibot.Page) -> Pattern:
     title = tpl_page.title(with_ns=False)
     title = case_escape(ns.case, title)
 
-    return re.compile(r'(?:(?:{}):){}{}'.format('|'.join(ns), marker, title))
+    return re.compile(f"(?:(?:{'|'.join(ns)}):){marker}{title}")
 
 
 def calc_md5_hexdigest(txt, salt) -> str:
@@ -276,8 +275,7 @@ class DiscussionThread:
 
     def __repr__(self) -> str:
         """Return a string representation."""
-        return '{}("{}",{} bytes)'.format(self.__class__.__name__, self.title,
-                                          len(self.content.encode('utf-8')))
+        return f"""{self.__class__.__name__}("{self.title}",{len(self.content.encode('utf-8'))} bytes)"""
 
     def feed_line(self, line: str) -> None:
         """Add a line to the content and find the newest timestamp."""
@@ -354,9 +352,7 @@ class DiscussionPage(pywikibot.Page):
         """
         if ts1 is None:
             return ts2
-        if ts2 is None:
-            return ts1
-        return max(ts1, ts2)
+        return ts1 if ts2 is None else max(ts1, ts2)
 
     def load_page(self) -> None:
         """Load the page to be archived and break it up into threads.
@@ -513,9 +509,10 @@ class PageArchiver:
         self.now = datetime.datetime.now(datetime.timezone.utc)
         self.archives = {}
         self.archived_threads = 0
-        self.month_num2orig_names = {}
-        for n, (long, short) in enumerate(self.site.months_names, start=1):
-            self.month_num2orig_names[n] = {'long': long, 'short': short}
+        self.month_num2orig_names = {
+            n: {'long': long, 'short': short}
+            for n, (long, short) in enumerate(self.site.months_names, start=1)
+        }
         self.load_config()
 
     def get_attr(self, attr, default='') -> Any:
@@ -584,8 +581,7 @@ class PageArchiver:
         """
         # Archived by timestamp
         algo = self.get_attr('algo')
-        re_t = re.fullmatch(r'old\((.*)\)', algo)
-        if re_t:
+        if re_t := re.fullmatch(r'old\((.*)\)', algo):
             if not thread.timestamp:
                 return None
             # TODO: handle unsigned
@@ -608,11 +604,12 @@ class PageArchiver:
         if title not in self.archives:
             page_title = self.page.title()
             archive_link = pywikibot.Link(title, self.site)
-            if not (title.startswith(page_title + '/') or self.force
-                    or self.key_ok()):
+            if not (
+                title.startswith(f'{page_title}/') or self.force or self.key_ok()
+            ):
                 raise ArchiveSecurityError(
-                    'Archive page {} does not start with page title ({})!'
-                    .format(archive_link, page_title))
+                    f'Archive page {archive_link} does not start with page title ({page_title})!'
+                )
             self.archives[title] = DiscussionPage(archive_link, self, params)
 
         return self.archives[title]
@@ -630,8 +627,12 @@ class PageArchiver:
             'month': timestamp.month,
             'week': int(time.strftime('%W', timestamp.timetuple())),
         }
-        params.update({'local' + key: to_local_digits(value, lang)
-                       for key, value in params.items()})
+        params.update(
+            {
+                f'local{key}': to_local_digits(value, lang)
+                for key, value in params.items()
+            }
+        )
         monthnames = self.month_num2orig_names[timestamp.month]
         params['monthname'] = monthnames['long']
         params['monthnameshort'] = monthnames['short']
@@ -662,7 +663,7 @@ class PageArchiver:
         whys = set()
         pywikibot.info(f'Processing {len(self.page.threads)} threads')
         fields = self.get_params(self.now, 0).keys()  # dummy parameters
-        regex = re.compile(r'%(\((?:{})\))d'.format('|'.join(fields)))
+        regex = re.compile(f"%(\((?:{'|'.join(fields)})\))d")
         stringpattern = regex.sub(r'%\1s', pattern)
         for i, thread in enumerate(self.page.threads):
             # TODO: Make an option so that unstamped (unsigned) posts get
@@ -677,18 +678,17 @@ class PageArchiver:
             try:
                 key = pattern % params
             except TypeError as e:
-                if 'a real number is required' in str(e):
-                    pywikibot.error(e)
-                    pywikibot.info(
-                        fill('<<lightblue>>Use string format field like '
-                             '%(localfield)s instead of %(localfield)d. '
-                             'Trying to solve it...'))
-                    pywikibot.info()
-                    pattern = stringpattern
-                    key = pattern % params
-                else:
+                if 'a real number is required' not in str(e):
                     raise MalformedConfigError(e)
 
+                pywikibot.error(e)
+                pywikibot.info(
+                    fill('<<lightblue>>Use string format field like '
+                         '%(localfield)s instead of %(localfield)d. '
+                         'Trying to solve it...'))
+                pywikibot.info()
+                pattern = stringpattern
+                key = pattern % params
             threads_per_archive[key].append((i, thread))
             whys.add(why)  # FIXME: we don't know if we ever archive anything
 
@@ -726,7 +726,7 @@ class PageArchiver:
 
                     self.preload_pages(counter, thread, pattern)
                     while not counter_found and counter > 1 \
-                            and not archive.exists():
+                                and not archive.exists():
                         # This may happen when either:
                         # 1. a previous version of the bot run and reset
                         #    the counter without archiving anything
@@ -804,17 +804,15 @@ class PageArchiver:
                 a.title(as_link=True) for a in self.archives.values()
                 if a.archived_threads > 0
             )
-            # Find out the reasons and return them localized
-            translated_whys = set()
-            for why, arg in whys:
-                # Archived by timestamp
-                if why == 'duration':
-                    translated_whys.add(
-                        i18n.twtranslate(self.site.code,
-                                         'archivebot-older-than',
-                                         {'duration': arg,
-                                          'count': self.archived_threads}))
-                # TODO: handle unsigned or archived by template
+            translated_whys = {
+                i18n.twtranslate(
+                    self.site.code,
+                    'archivebot-older-than',
+                    {'duration': arg, 'count': self.archived_threads},
+                )
+                for why, arg in whys
+                if why == 'duration'
+            }
             self.comment_params['why'] = comma.join(translated_whys)
             comment = i18n.twtranslate(self.site.code,
                                        'archivebot-page-summary',
@@ -994,5 +992,6 @@ def main(*args: str) -> None:
 if __name__ == '__main__':
     start = datetime.datetime.now()
     main()
-    pywikibot.info('\nExecution time: {} seconds'
-                   .format((datetime.datetime.now() - start).seconds))
+    pywikibot.info(
+        f'\nExecution time: {(datetime.datetime.now() - start).seconds} seconds'
+    )

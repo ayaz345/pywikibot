@@ -106,10 +106,7 @@ class APIGenerator(APIGeneratorBase, GeneratorWrapper):
         self.data_name = data_name
 
         self.query_increment: int | None
-        if config.step > 0:
-            self.query_increment = config.step
-        else:
-            self.query_increment = None
+        self.query_increment = config.step if config.step > 0 else None
         self.limit = None
         self.starting_offset = kwargs['parameters'].pop(self.continue_name, 0)
         self.request = self.request_class(**kwargs)
@@ -124,10 +121,11 @@ class APIGenerator(APIGeneratorBase, GeneratorWrapper):
         :param value: The value of maximum number of items to be retrieved
             per API request to set.
         """
-        self.query_increment = int(value)
+        self.query_increment = value
         self.request[self.limit_name] = self.query_increment
-        pywikibot.debug('{}: Set query_increment to {}.'
-                        .format(type(self).__name__, self.query_increment))
+        pywikibot.debug(
+            f'{type(self).__name__}: Set query_increment to {self.query_increment}.'
+        )
 
     def set_maximum_items(self, value: int | str | None) -> None:
         """
@@ -143,10 +141,12 @@ class APIGenerator(APIGeneratorBase, GeneratorWrapper):
             self.limit = int(value)
             if self.query_increment and self.limit < self.query_increment:
                 self.request[self.limit_name] = self.limit
-                pywikibot.debug('{}: Set request item limit to {}'
-                                .format(type(self).__name__, self.limit))
-            pywikibot.debug('{}: Set limit (maximum_items) to {}.'
-                            .format(type(self).__name__, self.limit))
+                pywikibot.debug(
+                    f'{type(self).__name__}: Set request item limit to {self.limit}'
+                )
+            pywikibot.debug(
+                f'{type(self).__name__}: Set limit (maximum_items) to {self.limit}.'
+            )
 
     @property
     def generator(self):
@@ -173,14 +173,15 @@ class APIGenerator(APIGeneratorBase, GeneratorWrapper):
                     yield item
                     n += 1
                     if self.limit is not None and n >= self.limit:
-                        pywikibot.debug('{}: Stopped iterating due to '
-                                        'exceeding item limit.'
-                                        .format(type(self).__name__))
+                        pywikibot.debug(
+                            f'{type(self).__name__}: Stopped iterating due to exceeding item limit.'
+                        )
                         return
                 offset += n_items
             else:
-                pywikibot.debug('{}: Stopped iterating due to empty list in '
-                                'response.'.format(type(self).__name__))
+                pywikibot.debug(
+                    f'{type(self).__name__}: Stopped iterating due to empty list in response.'
+                )
                 break
 
 
@@ -226,8 +227,9 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
             kwargs = self._clean_kwargs(kwargs)  # hasn't been called yet
         parameters = kwargs['parameters']
         if 'action' in parameters and parameters['action'] != 'query':
-            raise Error("{}: 'action' must be 'query', not {}"
-                        .format(self.__class__.__name__, kwargs['action']))
+            raise Error(
+                f"{self.__class__.__name__}: 'action' must be 'query', not {kwargs['action']}"
+            )
         parameters['action'] = 'query'
         # make sure request type is valid, and get limit key if any
         for modtype in ('generator', 'list', 'prop', 'meta'):
@@ -235,20 +237,23 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
                 self.modules = parameters[modtype].split('|')
                 break
         else:
-            raise Error('{}: No query module name found in arguments.'
-                        .format(self.__class__.__name__))
+            raise Error(
+                f'{self.__class__.__name__}: No query module name found in arguments.'
+            )
 
         parameters['indexpageids'] = True  # always ask for list of pageids
-        self.continue_name = 'continue'
         # Explicitly enable the simplified continuation
         parameters['continue'] = True
+        self.continue_name = 'continue'
         self.request = self.request_class(**kwargs)
 
-        self.site._paraminfo.fetch('query+' + mod for mod in self.modules)
+        self.site._paraminfo.fetch(f'query+{mod}' for mod in self.modules)
 
-        limited_modules = {mod for mod in self.modules
-                           if self.site._paraminfo.parameter('query+' + mod,
-                                                             'limit')}
+        limited_modules = {
+            mod
+            for mod in self.modules
+            if self.site._paraminfo.parameter(f'query+{mod}', 'limit')
+        }
 
         if not limited_modules:
             self.limited_module = None
@@ -272,37 +277,26 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
             # Default values will only cause more requests and make the query
             # slower.
             for module in limited_modules:
-                param = self.site._paraminfo.parameter('query+' + module,
-                                                       'limit')
-                prefix = self.site._paraminfo['query+' + module]['prefix']
+                param = self.site._paraminfo.parameter(f'query+{module}', 'limit')
+                prefix = self.site._paraminfo[f'query+{module}']['prefix']
                 if self.site.logged_in() \
-                   and self.site.has_right('apihighlimits'):
-                    self.request[prefix + 'limit'] = int(param['highmax'])
+                       and self.site.has_right('apihighlimits'):
+                    self.request[f'{prefix}limit'] = int(param['highmax'])
                 else:
-                    self.request[prefix + 'limit'] = int(param['max'])
+                    self.request[f'{prefix}limit'] = int(param['max'])
 
         self.api_limit: int | None
-        if config.step > 0:
-            self.api_limit = config.step
-        else:
-            self.api_limit = None
-
+        self.api_limit = config.step if config.step > 0 else None
         if self.limited_module:
-            self.prefix = self.site._paraminfo['query+'
-                                               + self.limited_module]['prefix']
+            self.prefix = self.site._paraminfo[f'query+{self.limited_module}']['prefix']
             self._update_limit()
 
         if self.api_limit is not None and 'generator' in parameters:
-            self.prefix = 'g' + self.prefix
+            self.prefix = f'g{self.prefix}'
 
         self.limit = None
         self.query_limit = self.api_limit
-        if 'generator' in parameters:
-            # name of the "query" subelement key to look for when iterating
-            self.resultkey = 'pages'
-        else:
-            self.resultkey = self.modules[0]
-
+        self.resultkey = 'pages' if 'generator' in parameters else self.modules[0]
         self._add_slots()
 
     @property
@@ -328,11 +322,7 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
         if self.site.mw_version < '1.32':
             return
         request = self.request
-        # If using any deprecated_params, do not add slots. Usage of
-        # these parameters together with slots is forbidden and the user will
-        # get an API warning anyway.
-        props = request.get('prop')
-        if props:
+        if props := request.get('prop'):
             if 'revisions' in props:
                 deprecated_params = {
                     'rvexpandtemplates', 'rvparse', 'rvdiffto', 'rvdifftotext',
@@ -346,8 +336,7 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
                     'parsetree'}
                 if not set(request) & deprecated_params:
                     request['drvslots'] = '*'
-        lists = request.get('list')
-        if lists:
+        if lists := request.get('list'):
             if 'allrevisions' in lists:
                 deprecated_params = {
                     'arvexpandtemplates', 'arvparse', 'arvdiffto',
@@ -376,8 +365,9 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
             self.query_limit = limit
         else:
             self.query_limit = min(self.api_limit, limit)
-        pywikibot.debug('{}: Set query_limit to {}.'
-                        .format(type(self).__name__, self.query_limit))
+        pywikibot.debug(
+            f'{type(self).__name__}: Set query_limit to {self.query_limit}.'
+        )
 
     def set_maximum_items(self, value: int | str | None) -> None:
         """Set the maximum number of items to be retrieved from the wiki.
@@ -398,16 +388,14 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
 
     def _update_limit(self) -> None:
         """Set query limit for self.module based on api response."""
-        param = self.site._paraminfo.parameter('query+' + self.limited_module,
-                                               'limit')
+        param = self.site._paraminfo.parameter(f'query+{self.limited_module}', 'limit')
         if self.site.logged_in() and self.site.has_right('apihighlimits'):
             limit = int(param['highmax'])
         else:
             limit = int(param['max'])
         if self.api_limit is None or limit < self.api_limit:
             self.api_limit = limit
-            pywikibot.debug('{}: Set query_limit to {}.'
-                            .format(type(self).__name__, self.api_limit))
+            pywikibot.debug(f'{type(self).__name__}: Set query_limit to {self.api_limit}.')
 
     def support_namespace(self) -> bool:
         """Check if namespace is a supported parameter on this query.
@@ -420,8 +408,10 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
         """
         assert self.limited_module  # some modules do not have a prefix
         return bool(
-            self.site._paraminfo.parameter('query+' + self.limited_module,
-                                           'namespace'))
+            self.site._paraminfo.parameter(
+                f'query+{self.limited_module}', 'namespace'
+            )
+        )
 
     def set_namespace(self, namespaces):
         """Set a namespace filter on this query.
@@ -439,11 +429,13 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
         #    type such as NoneType or bool, or more than one namespace
         #    if the API module does not support multiple namespaces
         assert self.limited_module  # some modules do not have a prefix
-        param = self.site._paraminfo.parameter('query+' + self.limited_module,
-                                               'namespace')
+        param = self.site._paraminfo.parameter(
+            f'query+{self.limited_module}', 'namespace'
+        )
         if not param:
-            pywikibot.warning('{} module does not support a namespace '
-                              'parameter'.format(self.limited_module))
+            pywikibot.warning(
+                f'{self.limited_module} module does not support a namespace parameter'
+            )
             warn('set_namespace() will be modified to raise TypeError '
                  'when namespace parameter is not supported. '
                  'It will be a Breaking Change, please update your code '
@@ -464,15 +456,16 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
 
         if 'multi' not in param and len(namespaces) != 1:
             if self._check_result_namespace is NotImplemented:
-                raise TypeError('{} module does not support multiple '
-                                'namespaces'.format(self.limited_module))
+                raise TypeError(
+                    f'{self.limited_module} module does not support multiple namespaces'
+                )
             self._namespaces = set(namespaces)
             namespaces = None
 
         if namespaces:
-            self.request[self.prefix + 'namespace'] = namespaces
-        elif self.prefix + 'namespace' in self.request:
-            del self.request[self.prefix + 'namespace']
+            self.request[f'{self.prefix}namespace'] = namespaces
+        elif f'{self.prefix}namespace' in self.request:
+            del self.request[f'{self.prefix}namespace']
 
         return None
 
@@ -514,7 +507,7 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
             new_limit = None
 
         if new_limit and 'rvprop' in self.request \
-                and 'content' in self.request['rvprop']:
+                    and 'content' in self.request['rvprop']:
             # queries that retrieve page content have lower limits
             # Note: although API allows up to 500 pages for content
             #       queries, these sometimes result in server-side errors
@@ -522,21 +515,25 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
             new_limit = min(new_limit, self.api_limit // 10, 250)
 
         if new_limit is not None:
-            self.request[self.prefix + 'limit'] = str(new_limit)
+            self.request[f'{self.prefix}limit'] = str(new_limit)
 
         if prev_limit != new_limit:
             pywikibot.debug(
-                '{name}: query_limit: {query}, api_limit: {api}, '
-                'limit: {limit}, new_limit: {new}, count: {count}\n'
-                '{name}: {prefix}limit: {value}'
-                .format(name=self.__class__.__name__,
+                (
+                    '{name}: query_limit: {query}, api_limit: {api}, '
+                    'limit: {limit}, new_limit: {new}, count: {count}\n'
+                    '{name}: {prefix}limit: {value}'.format(
+                        name=self.__class__.__name__,
                         query=self.query_limit,
                         api=self.api_limit,
                         limit=self.limit,
                         new=new_limit,
                         count=self._count,
                         prefix=self.prefix,
-                        value=self.request[self.prefix + 'limit']))
+                        value=self.request[f'{self.prefix}limit'],
+                    )
+                )
+            )
         return prev_limit, new_limit
 
     def _get_resultdata(self):
@@ -605,8 +602,8 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
 
             if not self.data or not isinstance(self.data, dict):
                 pywikibot.debug(
-                    '{}: stopped iteration because no dict retrieved from api.'
-                    .format(type(self).__name__))
+                    f'{type(self).__name__}: stopped iteration because no dict retrieved from api.'
+                )
                 break
 
             if 'query' in self.data and self.resultkey in self.data['query']:
@@ -627,8 +624,7 @@ class QueryGenerator(APIGeneratorBase, GeneratorWrapper):
                 previous_result_had_data = True
             else:
                 if 'query' not in self.data:
-                    pywikibot.log("%s: 'query' not found in api response." %
-                                  self.__class__.__name__)
+                    pywikibot.log(f"{self.__class__.__name__}: 'query' not found in api response.")
                     pywikibot.log(str(self.data))
 
                 # if (query-)continue is present, self.resultkey might not have
@@ -686,9 +682,10 @@ class PageGenerator(QueryGenerator):
         # If possible, use self.request after __init__ instead of appendParams
         def append_params(params, key, value) -> None:
             if key in params:
-                params[key] += '|' + value
+                params[key] += f'|{value}'
             else:
                 params[key] = value
+
         kwargs = self._clean_kwargs(kwargs)
         parameters = kwargs['parameters']
         # get some basic information about every page generated
@@ -698,8 +695,7 @@ class PageGenerator(QueryGenerator):
             append_params(parameters, 'prop', 'revisions')
             append_params(parameters, 'rvprop',
                           'ids|timestamp|flags|comment|user|content')
-        if not ('inprop' in parameters
-                and 'protection' in parameters['inprop']):
+        if 'inprop' not in parameters or 'protection' not in parameters['inprop']:
             append_params(parameters, 'inprop', 'protection')
         append_params(parameters, 'iiprop',
                       'timestamp|user|comment|url|size|sha1')
@@ -904,9 +900,7 @@ def _update_revisions(page, revisions) -> None:
         revid = rev['revid']
         revision = pywikibot.page.Revision(**rev)
         # do not overwrite an existing Revision if there is no content
-        if revid in page._revisions and revision.text is None:
-            pass
-        else:
+        if revid not in page._revisions or revision.text is not None:
             page._revisions[revid] = revision
 
 

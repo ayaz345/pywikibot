@@ -249,7 +249,7 @@ class APIMWError(APIError):
                  **kwargs: Any) -> None:
         """Save error dict returned by MW API."""
         self.mediawiki_exception_class_name = mediawiki_exception_class_name
-        code = 'internal_api_error_' + mediawiki_exception_class_name
+        code = f'internal_api_error_{mediawiki_exception_class_name}'
         super().__init__(code, info, **kwargs)
 
 

@@ -19,6 +19,7 @@
 
 .. warning: do not upload a development release to pypi.
 """
+
 #
 # (C) Pywikibot team, 2009-2023
 #
@@ -84,7 +85,7 @@ script_deps = {
 }
 
 extra_deps.update(script_deps)
-extra_deps.update({'scripts': [i for k, v in script_deps.items() for i in v]})
+extra_deps['scripts'] = [i for k, v in script_deps.items() for i in v]
 
 # ------- setup install_requires ------- #
 # packages which are mandatory
@@ -208,7 +209,7 @@ def get_packages(name) -> List[str]:
     except ImportError:
         sys.exit(
             'setuptools >= 40.1.0 is required to create a new distribution.')
-    packages = find_namespace_packages(include=[name + '.*'])
+    packages = find_namespace_packages(include=[f'{name}.*'])
     return [str(name)] + packages
 
 

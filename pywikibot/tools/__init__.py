@@ -131,8 +131,10 @@ def has_module(module: str, version: str | None = None) -> bool:
         module_version = packaging.version.Version(metadata_version)
 
         if module_version < required_version:
-            warn('Module version {} is lower than requested version {}'
-                 .format(module_version, required_version), ImportWarning)
+            warn(
+                f'Module version {module_version} is lower than requested version {required_version}',
+                ImportWarning,
+            )
             return False
 
     return True
@@ -379,9 +381,9 @@ def strtobool(val: str) -> bool:
     :raises ValueError: `val` is not a valid truth value
     """
     val = val.lower()
-    if val in ('y', 'yes', 't', 'true', 'on', '1'):
+    if val in {'y', 'yes', 't', 'true', 'on', '1'}:
         return True
-    if val in ('n', 'no', 'f', 'false', 'off', '0'):
+    if val in {'n', 'no', 'f', 'false', 'off', '0'}:
         return False
     raise ValueError(f'invalid truth value {val!r}')
 
@@ -499,8 +501,9 @@ class MediaWikiVersion:
         if isinstance(other, str):
             other = MediaWikiVersion(other)
         elif not isinstance(other, MediaWikiVersion):
-            raise TypeError("Comparison between 'MediaWikiVersion' and '{}' "
-                            'unsupported'.format(type(other).__name__))
+            raise TypeError(
+                f"Comparison between 'MediaWikiVersion' and '{type(other).__name__}' unsupported"
+            )
 
         if self.version != other.version:
             return self.version < other.version
@@ -544,16 +547,7 @@ def open_archive(filename: str, mode: str = 'rb', use_extension: bool = True):
         binary mode.
     :rtype: file-like object
     """
-    # extension_map maps magic_number to extension.
-    # Unfortunately, legacy LZMA container has no magic number
-    extension_map = {
-        b'BZh': 'bz2',
-        b'\x1F\x8B\x08': 'gz',
-        b"7z\xBC\xAF'\x1C": '7z',
-        b'\xFD7zXZ\x00': 'xz',
-    }
-
-    if mode in ('r', 'a', 'w'):
+    if mode in {'r', 'a', 'w'}:
         mode += 'b'
     elif mode not in ('rb', 'ab', 'wb'):
         raise ValueError(f'Invalid mode: "{mode}"')
@@ -568,18 +562,26 @@ def open_archive(filename: str, mode: str = 'rb', use_extension: bool = True):
         with open(filename, 'rb') as f:
             magic_number = f.read(8)
 
-        for pattern in extension_map:
+        # extension_map maps magic_number to extension.
+        # Unfortunately, legacy LZMA container has no magic number
+        extension_map = {
+            b'BZh': 'bz2',
+            b'\x1F\x8B\x08': 'gz',
+            b"7z\xBC\xAF'\x1C": '7z',
+            b'\xFD7zXZ\x00': 'xz',
+        }
+
+        for pattern, extension in extension_map.items():
             if magic_number.startswith(pattern):
-                extension = extension_map[pattern]
                 break
         else:
             extension = ''
 
     if extension == 'bz2':
-        binary = bz2.BZ2File(filename, mode)
+        return bz2.BZ2File(filename, mode)
 
     elif extension == 'gz':
-        binary = gzip.open(filename, mode)
+        return gzip.open(filename, mode)
 
     elif extension == '7z':
         if mode != 'rb':
@@ -600,16 +602,14 @@ def open_archive(filename: str, mode: str = 'rb', use_extension: bool = True):
             process.stdout.close()
             raise OSError(
                 f'Unexpected STDERR output from 7za {stderr}')
-        binary = process.stdout
+        return process.stdout
 
     elif extension in ('lzma', 'xz'):
         lzma_fmts = {'lzma': lzma.FORMAT_ALONE, 'xz': lzma.FORMAT_XZ}
-        binary = lzma.open(filename, mode, format=lzma_fmts[extension])
+        return lzma.open(filename, mode, format=lzma_fmts[extension])
 
     else:  # assume it's an uncompressed file
-        binary = open(filename, 'rb')
-
-    return binary
+        return open(filename, 'rb')
 
 
 def merge_unique_dicts(*args, **kwargs):
@@ -623,15 +623,15 @@ def merge_unique_dicts(*args, **kwargs):
     .. versionadded:: 3.0
     """
     args = list(args) + [dict(kwargs)]
-    conflicts = set()
     result = {}
+    conflicts = set()
     for arg in args:
         conflicts |= set(arg.keys()) & set(result.keys())
         result.update(arg)
     if conflicts:
-        raise ValueError('Multiple dicts contain the same keys: {}'
-                         .format(', '.join(sorted(str(key)
-                                                  for key in conflicts))))
+        raise ValueError(
+            f"Multiple dicts contain the same keys: {', '.join(sorted(str(key) for key in conflicts))}"
+        )
     return result
 
 
@@ -659,11 +659,11 @@ def file_mode_checker(
         os.close(os.open(filename, os.O_CREAT | os.O_EXCL, mode))
         return
 
-    warn_str = 'File {0} had {1:o} mode; converted to {2:o} mode.'
     if stat.S_ISREG(st_mode) and (st_mode - stat.S_IFREG != mode):
         os.chmod(filename, mode)
         # re-read and check changes
         if os.stat(filename).st_mode != st_mode and not quiet:
+            warn_str = 'File {0} had {1:o} mode; converted to {2:o} mode.'
             warn(warn_str.format(filename, st_mode - stat.S_IFREG, mode))
 
 
@@ -744,7 +744,7 @@ def cached(*arg: Callable) -> Any:
 
     @wraps(fn)
     def wrapper(obj: object, *, force=False) -> Any:
-        cache_name = '_' + fn.__name__
+        cache_name = f'_{fn.__name__}'
         if force:
             with suppress(AttributeError):
                 delattr(obj, cache_name)

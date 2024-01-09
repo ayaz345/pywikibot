@@ -146,12 +146,12 @@ class GeneratorFactory:
         self.enabled_options = set(enable)
         self.disabled_options = set(disable)
         for opt in enable:
-            if not hasattr(self, '_handle_' + opt):
-                pywikibot.warning((msg + 'enabled').format(opt))
+            if not hasattr(self, f'_handle_{opt}'):
+                pywikibot.warning(f'{msg}enabled'.format(opt))
                 self.enabled_options.remove(opt)
         for opt in disable:
-            if not hasattr(self, '_handle_' + opt):
-                pywikibot.warning((msg + 'disabled').format(opt))
+            if not hasattr(self, f'_handle_{opt}'):
+                pywikibot.warning(f'{msg}disabled'.format(opt))
                 self.disabled_options.remove(opt)
         if self.enabled_options and self.disabled_options:
             pywikibot.warning('Ignoring disabled option because enabled '
@@ -434,8 +434,8 @@ class GeneratorFactory:
         """Handle `-filelinks` argument."""
         if not value:
             value = i18n.input('pywikibot-enter-file-links-processing')
-        if not value.startswith(self.site.namespace(6) + ':'):
-            value = 'Image:' + value
+        if not value.startswith(f'{self.site.namespace(6)}:'):
+            value = f'Image:{value}'
         file_page = pywikibot.FilePage(self.site, value)
         return file_page.using_pages()
 
@@ -539,7 +539,7 @@ class GeneratorFactory:
         """Handle `-property` argument."""
         if not value:
             question = 'Which property name to be used?'
-            value = pywikibot.input(question + ' (List [?])')
+            value = pywikibot.input(f'{question} (List [?])')
             pnames = self.site.get_property_names()
             # also use the default by <enter> key
             if value == '?' or value not in pnames:
@@ -588,11 +588,9 @@ class GeneratorFactory:
         """Handle `-recentchanges` argument."""
         rcstart = None
         rcend = None
-        rctag = None
         total = None
         params = value.split(',') if value else []
-        if params and not params[0].isdigit():
-            rctag = params.pop(0)
+        rctag = params.pop(0) if params and not params[0].isdigit() else None
         if len(params) > 2:
             raise ValueError('More than two parameters passed.')
         if len(params) == 2:
@@ -964,7 +962,7 @@ class GeneratorFactory:
 
         if not arg.startswith('-') and self._positional_arg_name:
             value = arg
-            arg = '-' + self._positional_arg_name
+            arg = f'-{self._positional_arg_name}'
         else:
             arg, _, value = arg.partition(':')
 
@@ -978,7 +976,7 @@ class GeneratorFactory:
         if self.enabled_options and opt not in self.enabled_options:
             return False
 
-        handler = getattr(self, '_handle_' + opt, None)
+        handler = getattr(self, f'_handle_{opt}', None)
         if not handler:
             return False
 

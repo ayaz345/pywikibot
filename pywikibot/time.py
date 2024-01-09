@@ -118,13 +118,11 @@ class Timestamp(datetime.datetime):
         .. versionadded:: 7.5
         """
         RE_MW = r'\d{14}'  # noqa: N806
-        m = re.fullmatch(RE_MW, timestr)
-
-        if not m:
+        if m := re.fullmatch(RE_MW, timestr):
+            return cls.strptime(timestr, cls.mediawikiTSFormat)
+        else:
             raise ValueError(
                 f'time data {timestr!r} does not match MW format.')
-
-        return cls.strptime(timestr, cls.mediawikiTSFormat)
 
     @classmethod
     def _from_iso8601(cls, timestr: str) -> Timestamp:
@@ -191,9 +189,7 @@ class Timestamp(datetime.datetime):
             sec -= 1
             usec = 1_000_000 - usec
 
-        ts = cls(1970, 1, 1) + datetime.timedelta(seconds=sec,
-                                                  microseconds=usec)
-        return ts
+        return cls(1970, 1, 1) + datetime.timedelta(seconds=sec, microseconds=usec)
 
     @classmethod
     def _from_string(cls, timestr: str) -> Timestamp:
@@ -402,11 +398,7 @@ class TZoneFixedOffset(datetime.tzinfo):
 
     def __repr__(self) -> str:
         """Return the internal representation of the timezone."""
-        return '{}({}, {})'.format(
-            self.__class__.__name__,
-            self._offset.days * 86400 + self._offset.seconds,
-            self._name
-        )
+        return f'{self.__class__.__name__}({self._offset.days * 86400 + self._offset.seconds}, {self._name})'
 
 
 def str2timedelta(

@@ -69,6 +69,4 @@ class Family(family.FandomFamily):
 
     def scriptpath(self, code):
         """Return the script path for this family."""
-        if code == 'es':
-            return ''
-        return super().scriptpath(code)
+        return '' if code == 'es' else super().scriptpath(code)

@@ -33,6 +33,7 @@ utility methods to build paths relative to base_dir:
    Editor settings has been revised. *editor* variable is None by
    default. Editor detection functions were moved to :mod:`editor`.
 """
+
 #
 # (C) Pywikibot team, 2003-2023
 #
@@ -90,8 +91,6 @@ elif __no_user_config == '0':
 class _ConfigurationDeprecationWarning(UserWarning):
 
     """Feature that is no longer supported."""
-
-
 # IMPORTANT:
 # Do not change any of the variables in this file. Instead, make a
 # user config file (user-config.py), and overwrite values in there.
@@ -238,7 +237,7 @@ password_file = None
 # edit summary to use if not supplied by bot script
 # WARNING: this should NEVER be used in practice, ALWAYS supply a more
 #          relevant summary for bot edits
-default_edit_summary = 'Pywikibot ' + pwb_version
+default_edit_summary = f'Pywikibot {pwb_version}'
 
 # Edit summary prefix
 # if a str, always use this as summary prefix e.g. 'Bot:' for all sites
@@ -365,7 +364,7 @@ def get_base_dir(test_directory: str | None = None,
                 win_version = int(platform.version().split('.')[0])
                 if win_version == 5:
                     sub_dir = ['Application Data']
-                elif win_version in (6, 10):
+                elif win_version in {6, 10}:
                     sub_dir = ['AppData', 'Roaming']
                 else:
                     raise OSError(
@@ -417,8 +416,8 @@ base_dir = get_base_dir(config_file=user_config_file)
 
 for arg in sys.argv[1:]:
     if arg.startswith('-verbose') or arg == '-v':
-        info('The base directory is ' + base_dir)
-        info('The user config file is ' + user_config_file)
+        info(f'The base directory is {base_dir}')
+        info(f'The user config file is {user_config_file}')
         break
 family_files = {}
 
@@ -966,10 +965,8 @@ class _DifferentTypeError(UserWarning, TypeError):
         allowed_types: tuple[type, ...],
     ) -> None:
         super().__init__(
-            'Configuration variable "{}" is defined as "{}" in '
-            'your {} but expected "{}".'
-            .format(name, actual_type.__name__, user_config_file,
-                    '", "'.join(t.__name__ for t in allowed_types)))
+            f"""Configuration variable "{name}" is defined as "{actual_type.__name__}" in your {user_config_file} but expected "{'", "'.join(t.__name__ for t in allowed_types)}"."""
+        )
 
 
 def _assert_default_type(
@@ -1026,11 +1023,15 @@ def _check_user_config_types(
                 warn('\n' + fill(DEPRECATED_VARIABLE.format(name)),
                      _ConfigurationDeprecationWarning)
             elif name not in _future_variables:
-                warn('\n' + fill('Configuration variable "{}" is defined in '
-                                 'your {} but unknown. It can be a misspelled '
-                                 'one or a variable that is no longer '
-                                 'supported.'.format(name, user_config_file)),
-                     UserWarning)
+                warn(
+                    (
+                        '\n'
+                        + fill(
+                            f'Configuration variable "{name}" is defined in your {user_config_file} but unknown. It can be a misspelled one or a variable that is no longer supported.'
+                        )
+                    ),
+                    UserWarning,
+                )
 
 
 _check_user_config_types(_exec_globals, _public_globals, _imports)

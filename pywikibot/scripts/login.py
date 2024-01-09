@@ -98,9 +98,9 @@ def login_one_site(code, family, oauth, logout, autocreate):
     try:
         site = pywikibot.Site(code, family)
     except SiteDefinitionError:
-        pywikibot.error('{}:{} is not a valid site, '
-                        'please remove it from your user-config'
-                        .format(family, code))
+        pywikibot.error(
+            f'{family}:{code} is not a valid site, please remove it from your user-config'
+        )
         return
 
     if oauth:
@@ -115,8 +115,7 @@ def login_one_site(code, family, oauth, logout, autocreate):
         except NoUsernameError as e:
             pywikibot.error(e)
 
-    user = site.user()
-    if user:
+    if user := site.user():
         pywikibot.info(f'Logged in on {site} as {user}.')
     elif logout:
         pywikibot.info(f'Logged out of {site}.')
@@ -176,5 +175,6 @@ if __name__ == '__main__':
     start = datetime.datetime.now()
     with suppress(KeyboardInterrupt):
         main()
-    pywikibot.info('\nExecution time: {} seconds'
-                   .format((datetime.datetime.now() - start).seconds))
+    pywikibot.info(
+        f'\nExecution time: {(datetime.datetime.now() - start).seconds} seconds'
+    )

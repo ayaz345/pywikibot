@@ -1,4 +1,5 @@
 """Date data and manipulation module."""
+
 #
 # (C) Pywikibot team, 2003-2023
 #
@@ -51,8 +52,8 @@ enMonthNames = ['January', 'February', 'March', 'April', 'May', 'June',
                 'December']
 waMonthNames = ['djanvî', 'fevrî', 'måss', 'avri', 'may', 'djun', 'djulete',
                 'awousse', 'setimbe', 'octôbe', 'nôvimbe', 'decimbe']
-dayMnthFmts = ['Day_' + str(s) for s in enMonthNames]  # e.g. 'Day_January'
-yrMnthFmts = ['Year_' + str(s) for s in enMonthNames]  # e.g. 'Year_January'
+dayMnthFmts = [f'Day_{str(s)}' for s in enMonthNames]
+yrMnthFmts = [f'Year_{str(s)}' for s in enMonthNames]
 
 
 # the order of these lists is important
@@ -406,7 +407,7 @@ def escapePattern2(
     """
     @singledispatch
     def decode(dec: decoder_type, subpattern: str, newpattern: str,
-               strpattern: str) -> tuple[str, str]:
+                   strpattern: str) -> tuple[str, str]:
 
         if len(subpattern) == 3:
             # enforce mandatory field size
@@ -422,7 +423,7 @@ def escapePattern2(
         # This causes problem with the zero padding.
         # Need to rethink
 
-        return newpattern, strpattern + '%s'
+        return newpattern, f'{strpattern}%s'
 
     @decode.register(str)
     def _(dec: str, subpattern: str, newpattern: str,
@@ -441,9 +442,12 @@ def escapePattern2(
         for s in _reParameters.split(pattern):
             if s is None:
                 continue
-            if (len(s) in (2, 3) and s[0] == '%'
-                    and s[-1] in _digitDecoders
-                    and (len(s) == 2 or s[1] in _decimalDigits)):
+            if (
+                len(s) in {2, 3}
+                and s[0] == '%'
+                and s[-1] in _digitDecoders
+                and (len(s) == 2 or s[1] in _decimalDigits)
+            ):
                 # Must match a "%2d" or "%d" style
                 dec = _digitDecoders[s[-1]]
                 newPattern, strPattern = decode(dec, s, newPattern, strPattern)
@@ -496,9 +500,9 @@ def dh(value: int, pattern: str, encf: encf_type, decf: decf_type,
     params = encf(value)
 
     if isinstance(params, (tuple, list)):
-        assert len(params) == len(decoders), (
-            'parameter count ({}) does not match decoder count ({})'
-            .format(len(params), len(decoders)))
+        assert len(params) == len(
+            decoders
+        ), f'parameter count ({len(params)}) does not match decoder count ({len(decoders)})'
         # convert integer parameters into their textual representation
         str_params = tuple(_make_parameter(decoders[i], param)
                            for i, param in enumerate(params))
@@ -514,8 +518,7 @@ def dh(value: int, pattern: str, encf: encf_type, decf: decf_type,
 def _(value: str, pattern: str, encf: encf_type, decf: decf_type,
       filter: Callable[[int], bool] | None = None) -> int:
     compPattern, _strPattern, decoders = escapePattern2(pattern)
-    m = compPattern.match(value)
-    if m:
+    if m := compPattern.match(value):
         # decode each found value using provided decoder
         values = [decoder[2](m[i])
                   for i, decoder in enumerate(decoders, start=1)]
@@ -705,14 +708,24 @@ class MonthFormat(abc.MutableMapping):  # type: ignore[type-arg]
 
 def _en_period(period: str):
     """Create century and millenium format function for ``en`` language."""
-    return lambda m: multi(m, [
-        (lambda v: dh_centuryAD(v, '%dst ' + period),
-         lambda p: p == 1 or (p > 20 and p % 10 == 1)),
-        (lambda v: dh_centuryAD(v, '%dnd ' + period),
-         lambda p: p == 2 or (p > 20 and p % 10 == 2)),
-        (lambda v: dh_centuryAD(v, '%drd ' + period),
-         lambda p: p == 3 or (p > 20 and p % 10 == 3)),
-        (lambda v: dh_centuryAD(v, '%dth ' + period), alwaysTrue)])
+    return lambda m: multi(
+        m,
+        [
+            (
+                lambda v: dh_centuryAD(v, f'%dst {period}'),
+                lambda p: p == 1 or (p > 20 and p % 10 == 1),
+            ),
+            (
+                lambda v: dh_centuryAD(v, f'%dnd {period}'),
+                lambda p: p == 2 or (p > 20 and p % 10 == 2),
+            ),
+            (
+                lambda v: dh_centuryAD(v, f'%drd {period}'),
+                lambda p: p == 3 or (p > 20 and p % 10 == 3),
+            ),
+            (lambda v: dh_centuryAD(v, f'%dth {period}'), alwaysTrue),
+        ],
+    )
 
 
 def _period_with_pattern(period: str, pattern: str):
@@ -1937,7 +1950,7 @@ for monthId in range(12):
     if monthId + 1 in (1, 3, 5, 7, 8, 10, 12):
         # 31 days a month
         formatLimits[dayMnthFmts[monthId]] = _format_limit_dom(31)
-    elif monthId + 1 == 2:  # February
+    elif monthId == 1:  # February
         # 29 days a month
         formatLimits[dayMnthFmts[monthId]] = _format_limit_dom(29)
     else:
@@ -1963,10 +1976,7 @@ def getAutoFormat(lang: str, title: str, ignoreFirstLetterCase: bool = True
     # change case of the first character to the opposite, and try again
     if ignoreFirstLetterCase:
         with suppress(Exception):
-            if title[0].isupper():
-                title = first_lower(title)
-            else:
-                title = first_upper(title)
+            title = first_lower(title) if title[0].isupper() else first_upper(title)
             return getAutoFormat(lang, title, ignoreFirstLetterCase=False)
     return None, None
 

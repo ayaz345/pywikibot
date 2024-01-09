@@ -50,13 +50,13 @@ class Family(family.SubdomainFamily):
         """Property listing family languages."""
         code_replacement = {'cz': 'cs', 'jp': 'ja', 'vn': 'vi'}
         cls.langs = super().langs
-        cls.langs['en'] = 'www.' + cls.domain
+        cls.langs['en'] = f'www.{cls.domain}'
         for domain in cls.domains:
             if domain == cls.domain:
                 continue
             *_, code = domain.rpartition('.')
             code = code_replacement.get(code, code)
-            cls.langs[code] = 'www.' + domain
+            cls.langs[code] = f'www.{domain}'
         return cls.langs
 
     def scriptpath(self, code) -> str:

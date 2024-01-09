@@ -122,8 +122,8 @@ class BasePage(ComparableMixin):
             self._revisions = {}
         else:
             raise Error(
-                "Invalid argument type '{}' in Page initializer: {}"
-                .format(type(source), source))
+                f"Invalid argument type '{type(source)}' in Page initializer: {source}"
+            )
 
     @property
     def site(self):
@@ -237,10 +237,7 @@ class BasePage(ComparableMixin):
         """
         title = self._link.canonical_title()
         label = self._link.title
-        if with_section and self.section():
-            section = '#' + self.section()
-        else:
-            section = ''
+        section = f'#{self.section()}' if with_section and self.section() else ''
         if as_link:
             if insite:
                 target_code = insite.code
@@ -249,7 +246,7 @@ class BasePage(ComparableMixin):
                 target_code = config.mylang
                 target_family = config.family
             if force_interwiki \
-               or (allow_interwiki
+                   or (allow_interwiki
                    and (self.site.family.name != target_family
                         or self.site.code != target_code)):
                 if self.site.family.name not in (
@@ -264,9 +261,7 @@ class BasePage(ComparableMixin):
                 title = f':{title}'
             elif self.namespace() == Namespace.MAIN and not section:
                 with_ns = True
-            if with_ns:
-                return f'[[{title}{section}]]'
-            return f'[[{title}{section}|{label}]]'
+            return f'[[{title}{section}]]' if with_ns else f'[[{title}{section}|{label}]]'
         if not with_ns and self.namespace() != Namespace.MAIN:
             title = label + section
         else:
@@ -443,12 +438,7 @@ class BasePage(ComparableMixin):
             title = self.title(as_url=True)
         else:
             title = self.title(as_url=False).replace(' ', '_')
-        return '{}//{}{}/index.php?title={}&oldid={}'.format(
-            self.site.protocol() + ':' if with_protocol else '',
-            self.site.hostname(),
-            self.site.scriptpath(),
-            title,
-            oldid if oldid is not None else self.latest_revision_id)
+        return f"{f'{self.site.protocol()}:' if with_protocol else ''}//{self.site.hostname()}{self.site.scriptpath()}/index.php?title={title}&oldid={oldid if oldid is not None else self.latest_revision_id}"
 
     @property
     def latest_revision_id(self):
@@ -610,7 +600,7 @@ class BasePage(ComparableMixin):
         .. seealso:: :meth:`APISite.extract()
            <pywikibot.site._extensions.TextExtractsMixin.extract>`.
         """
-        if variant in ('plain', 'html'):
+        if variant in {'plain', 'html'}:
             extract = self.site.extract(self, chars=chars, sentences=sentences,
                                         intro=intro,
                                         plaintext=variant == 'plain')
@@ -624,16 +614,15 @@ class BasePage(ComparableMixin):
 
             extract = self.text[:]
             if intro:
-                pos = extract.find('\n=')
-                if pos:
+                if pos := extract.find('\n='):
                     extract = extract[:pos]
             if chars:
                 extract = shorten(extract, chars, break_long_words=False,
                                   placeholder='…')
         else:
             raise ValueError(
-                'variant parameter must be "plain", "html" or "wiki", not "{}"'
-                .format(variant))
+                f'variant parameter must be "plain", "html" or "wiki", not "{variant}"'
+            )
 
         if not lines:
             return extract
@@ -708,11 +697,14 @@ class BasePage(ComparableMixin):
         i.e. which is not returned by Site.botusers(), it will be returned
         as a non-bot edit.
         """
-        for entry in self.revisions():
-            if entry.user and (not self.site.isBot(entry.user)):
-                return entry.user
-
-        return None
+        return next(
+            (
+                entry.user
+                for entry in self.revisions()
+                if entry.user and (not self.site.isBot(entry.user))
+            ),
+            None,
+        )
 
     @deprecated('latest_revision.timestamp', since='8.0.0')
     def editTime(self) -> pywikibot.Timestamp:
@@ -1184,23 +1176,33 @@ class BasePage(ComparableMixin):
                         '{{bots|%s=}} is not valid. Ignoring.' % key)
                     continue
 
-                if key == 'allow':
-                    if not ('all' in names or username in names):
-                        return False
+                if (
+                    key == 'allow'
+                    and 'all' not in names
+                    and username not in names
+                    or key != 'allow'
+                    and key == 'deny'
+                    and ('all' in names or username in names)
+                    or key != 'allow'
+                    and key != 'deny'
+                    and key == 'allowscript'
+                    and 'all' not in names
+                    and module not in names
+                    or key != 'allow'
+                    and key != 'deny'
+                    and key != 'allowscript'
+                    and key == 'denyscript'
+                    and ('all' in names or module in names)
+                ):
+                    return False
 
-                elif key == 'deny':
-                    if 'all' in names or username in names:
-                        return False
-
-                elif key == 'allowscript':
-                    if not ('all' in names or module in names):
-                        return False
-
-                elif key == 'denyscript':
-                    if 'all' in names or module in names:
-                        return False
-
-                elif key:  # ignore unrecognized keys with a warning
+                elif (
+                    key != 'allow'
+                    and key != 'deny'
+                    and key != 'allowscript'
+                    and key != 'denyscript'
+                    and key
+                ):  # ignore unrecognized keys with a warning
                     pywikibot.warning(
                         '{{bots|%s}} is not valid. Ignoring.' % params[0])
 
@@ -1479,10 +1481,7 @@ class BasePage(ComparableMixin):
         """
         # This function does not exist in the API, so it has to be
         # implemented by screen-scraping
-        if expand:
-            text = self.expand_text()
-        else:
-            text = self.text
+        text = self.expand_text() if expand else self.text
         for linkmatch in pywikibot.link_regex.finditer(
                 textlib.removeDisabledParts(text)):
             linktitle = linkmatch['title']
@@ -1493,7 +1492,7 @@ class BasePage(ComparableMixin):
                 # initial ":" indicates not a language link
                 # link to a different family is not a language link
                 if link.site != self.site \
-                   and (linktitle.lstrip().startswith(':')
+                       and (linktitle.lstrip().startswith(':')
                         or link.site.family != self.site.family):
                     yield link
             except Error:
@@ -1656,10 +1655,7 @@ class BasePage(ComparableMixin):
             self._coords = []
             self.site.loadcoordinfo(self)
         if primary_only:
-            for coord in self._coords:
-                if coord.primary:
-                    return coord
-            return None
+            return next((coord for coord in self._coords if coord.primary), None)
         return list(self._coords)
 
     def page_image(self):
@@ -1739,8 +1735,10 @@ class BasePage(ComparableMixin):
                                reverse: bool = False,
                                total: int | None = None):
         """Return the version history as a wiki table."""
-        result = '{| class="wikitable"\n'
-        result += '! oldid || date/time || username || edit summary\n'
+        result = (
+            '{| class="wikitable"\n'
+            + '! oldid || date/time || username || edit summary\n'
+        )
         for entry in self.revisions(reverse=reverse, total=total):
             result += '|----\n'
             result += ('| {r.revid} || {r.timestamp} || {r.user} || '
@@ -1952,16 +1950,20 @@ class BasePage(ComparableMixin):
             empty list.
         """
         if hasattr(self, '_deletedRevs') \
-           and timestamp in self._deletedRevs \
-           and (not content or 'content' in self._deletedRevs[timestamp]):
+               and timestamp in self._deletedRevs \
+               and (not content or 'content' in self._deletedRevs[timestamp]):
             return self._deletedRevs[timestamp]
 
-        for item in self.site.deletedrevs(self, start=timestamp,
-                                          content=content, total=1, **kwargs):
-            # should only be one item with one revision
-            if item['title'] == self.title() and 'revisions' in item:
-                return item['revisions'][0]
-        return []
+        return next(
+            (
+                item['revisions'][0]
+                for item in self.site.deletedrevs(
+                    self, start=timestamp, content=content, total=1, **kwargs
+                )
+                if item['title'] == self.title() and 'revisions' in item
+            ),
+            [],
+        )
 
     def markDeletedRevision(self, timestamp, undelete: bool = True):
         """
@@ -2101,8 +2103,7 @@ class BasePage(ComparableMixin):
                 pywikibot.error(
                     f'{self} is not in category {old_cat.title()}!')
             else:
-                pywikibot.info('{} is not in category {}, skipping...'
-                               .format(self, old_cat.title()))
+                pywikibot.info(f'{self} is not in category {old_cat.title()}, skipping...')
             return False
 
         # This prevents the bot from adding new_cat if it is already present.

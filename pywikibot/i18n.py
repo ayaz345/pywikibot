@@ -638,8 +638,9 @@ def translate(code: str | pywikibot.site.BaseSite,
         return trans
 
     if not isinstance(parameters, Mapping):
-        raise ValueError('parameters should be a mapping, not {}'
-                         .format(type(parameters).__name__))
+        raise ValueError(
+            f'parameters should be a mapping, not {type(parameters).__name__}'
+        )
 
     # else we check for PLURAL variants
     trans = _extract_plural(code, trans, parameters)
@@ -672,7 +673,7 @@ def get_bot_prefix(
         return ''
 
     if isinstance(config_prefix, str):
-        return config_prefix + ' '
+        return f'{config_prefix} '
 
     try:
         prefix = twtranslate(source, 'pywikibot-bot-prefix') + ' '
@@ -780,10 +781,8 @@ def twtranslate(
             return fallback_prompt
 
         raise pywikibot.exceptions.TranslationError(
-            'Unable to load messages package {} for bundle {}'
-            '\nIt can happen due to lack of i18n submodule or files. '
-            'See {}/i18n'
-            .format(_messages_package_name, twtitle, __url__))
+            f'Unable to load messages package {_messages_package_name} for bundle {twtitle}\nIt can happen due to lack of i18n submodule or files. See {__url__}/i18n'
+        )
 
     # if source is a site then use its lang attribute, otherwise it's a str
     lang = getattr(source, 'lang', source)
@@ -799,12 +798,11 @@ def twtranslate(
         if trans:
             break
     else:
-        raise pywikibot.exceptions.TranslationError(fill(
-            'No {} translation has been defined for TranslateWiki key "{}". '
-            'It can happen due to lack of i18n submodule or files or an '
-            'outdated submodule. See {}/i18n'
-            .format('English' if 'en' in langs else f"'{lang}'",
-                    twtitle, __url__)))
+        raise pywikibot.exceptions.TranslationError(
+            fill(
+                f"""No {'English' if 'en' in langs else f"'{lang}'"} translation has been defined for TranslateWiki key "{twtitle}". It can happen due to lack of i18n submodule or files or an outdated submodule. See {__url__}/i18n"""
+            )
+        )
 
     if '{{PLURAL:' in trans:
         # _extract_plural supports in theory non-mappings, but they are
@@ -814,8 +812,9 @@ def twtranslate(
         trans = _extract_plural(alt, trans, parameters)
 
     if parameters is not None and not isinstance(parameters, Mapping):
-        raise ValueError('parameters should be a mapping, not {}'
-                         .format(type(parameters).__name__))
+        raise ValueError(
+            f'parameters should be a mapping, not {type(parameters).__name__}'
+        )
 
     if not only_plural and parameters:
         trans = trans % parameters
@@ -956,8 +955,8 @@ def input(twtitle: str,
         prompt = fallback_prompt
     else:
         raise pywikibot.exceptions.TranslationError(
-            'Unable to load messages package {} for bundle {}'
-            .format(_messages_package_name, twtitle))
+            f'Unable to load messages package {_messages_package_name} for bundle {twtitle}'
+        )
     return pywikibot.input(prompt, password)
 
 

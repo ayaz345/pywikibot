@@ -125,7 +125,7 @@ def RedirectFilterPageGenerator(generator: Iterable[pywikibot.page.Page],
 
     for page in generator or []:
         is_redirect = page.isRedirectPage()
-        if bool(no_redirects) != bool(is_redirect):  # xor
+        if no_redirects != bool(is_redirect):  # xor
             yield page
             continue
 
@@ -224,10 +224,9 @@ def SubpageFilterGenerator(generator: Iterable[pywikibot.page.Page],
     for page in generator:
         if page.depth <= max_depth:
             yield page
-        else:
-            if show_filtered:
-                pywikibot.info(
-                    f'Page {page} is a subpage that is too deep. Skipping.')
+        elif show_filtered:
+            pywikibot.info(
+                f'Page {page} is a subpage that is too deep. Skipping.')
 
 
 class RegexFilter:
@@ -456,7 +455,7 @@ def UserEditFilterGenerator(generator: Iterable[pywikibot.page.Page],
 
     for page in generator:
         contribs = page.contributors(total=max_revision_depth, endtime=ts)
-        if bool(contribs[username]) is not bool(skip):  # xor operation
+        if bool(contribs[username]) is not skip:  # xor operation
             yield page
         elif show_filtered:
             pywikibot.info(f'Skipping {page.title(as_link=True)}')

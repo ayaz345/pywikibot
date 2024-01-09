@@ -349,22 +349,23 @@ class CategoryDatabase:
                 and hasattr(self, 'superclass_db'))
 
     def _load(self) -> None:
-        if not self.is_loaded:
-            try:
-                if config.verbose_output:
-                    pywikibot.info('Reading dump from '
-                                   + config.shortpath(self.filename))
-                with open_archive(self.filename, 'rb') as f:
-                    databases = pickle.load(f)
-                # keys are categories, values are 2-tuples with lists as
-                # entries.
-                self.cat_content_db = databases['cat_content_db']
-                # like the above, but for supercategories
-                self.superclass_db = databases['superclass_db']
-                del databases
-            except Exception:
-                # If something goes wrong, just rebuild the database
-                self.rebuild()
+        if self.is_loaded:
+            return
+        try:
+            if config.verbose_output:
+                pywikibot.info('Reading dump from '
+                               + config.shortpath(self.filename))
+            with open_archive(self.filename, 'rb') as f:
+                databases = pickle.load(f)
+            # keys are categories, values are 2-tuples with lists as
+            # entries.
+            self.cat_content_db = databases['cat_content_db']
+            # like the above, but for supercategories
+            self.superclass_db = databases['superclass_db']
+            del databases
+        except Exception:
+            # If something goes wrong, just rebuild the database
+            self.rebuild()
 
     def rebuild(self) -> None:
         """Rebuild the dabatase."""
@@ -436,13 +437,12 @@ class CategoryDatabase:
             }
             # store dump to disk in binary format
             with open_archive(filename, 'wb') as f, \
-                 suppress(pickle.PicklingError):
+                     suppress(pickle.PicklingError):
                 pickle.dump(databases, f, protocol=config.pickle_protocol)
         else:
             with suppress(EnvironmentError):
                 os.remove(filename)
-                pywikibot.info('Database is empty. {} removed'
-                               .format(config.shortpath(filename)))
+                pywikibot.info(f'Database is empty. {config.shortpath(filename)} removed')
 
 
 class CategoryAddBot(CategoryPreprocess):
@@ -481,17 +481,16 @@ class CategoryAddBot(CategoryPreprocess):
         # regular expression that matches a name followed by a space and
         # disambiguation brackets. Group 1 is the name without the rest.
         brackets_regex = re.compile(r'(.*) \(.+?\)')
-        match_object = brackets_regex.match(page_name)
-        if match_object:
+        if match_object := brackets_regex.match(page_name):
             page_name = match_object[1]
         split_string = page_name.rsplit(' ', 1)
         if len(split_string) > 1:
             # pull last part of the name to the beginning, and append the
             # rest after a comma; e.g., "John von Neumann" becomes
             # "Neumann, John von"
-            sorted_key = split_string[1] + ', ' + split_string[0]
+            sorted_key = f'{split_string[1]}, {split_string[0]}'
             # give explicit sort key
-            return pywikibot.Page(site, catlink.title() + '|' + sorted_key)
+            return pywikibot.Page(site, f'{catlink.title()}|{sorted_key}')
         return pywikibot.Page(site, catlink.title())
 
     def treat(self, page) -> None:
@@ -509,19 +508,16 @@ class CategoryAddBot(CategoryPreprocess):
             text, self.current_page.site, include=self.includeonly)
         pywikibot.info('Current categories:')
         for cat in cats:
-            pywikibot.info('* ' + cat.title())
+            pywikibot.info(f'* {cat.title()}')
         catpl = pywikibot.Category(self.current_page.site, self.newcat)
         if catpl in cats:
-            pywikibot.info('{} is already in {}.'
-                           .format(self.current_page.title(), catpl.title()))
+            pywikibot.info(f'{self.current_page.title()} is already in {catpl.title()}.')
         else:
             if self.sort:
                 catpl = self.sorted_by_last_name(catpl, self.current_page)
             pywikibot.info(f'Adding {catpl.title(as_link=True)}')
             if page.namespace() == page.site.namespaces.TEMPLATE:
-                tagname = 'noinclude'
-                if self.includeonly == ['includeonly']:
-                    tagname = 'includeonly'
+                tagname = 'includeonly' if self.includeonly == ['includeonly'] else 'noinclude'
                 tagnameregexp = re.compile(fr'(.*)(<\/{tagname}>)',
                                            re.I | re.DOTALL)
                 categorytitle = catpl.title(
@@ -631,7 +627,7 @@ class CategoryMoveRobot(CategoryPreprocess):
         self.site = pywikibot.Site()
         self.can_move_cats = self.site.has_right('move-categorypages')
         self.noredirect = delete_oldcat \
-            and self.site.has_right('suppressredirect')
+                and self.site.has_right('suppressredirect')
         # Create attributes for the categories and their talk pages.
         self.oldcat = self._makecat(oldcat)
         self.oldtalk = self.oldcat.toggleTalkPage()
@@ -663,8 +659,8 @@ class CategoryMoveRobot(CategoryPreprocess):
             if self.wikibase and repo.username() is None:
                 # The bot can't move categories nor update the Wikibase repo
                 raise NoUsernameError(
-                    "The 'wikibase' option is turned on and {} has no "
-                    'registered username.'.format(repo))
+                    f"The 'wikibase' option is turned on and {repo} has no registered username."
+                )
 
         template_vars = {'oldcat': self.oldcat.title(with_ns=False)}
         if self.newcat:
@@ -693,17 +689,15 @@ class CategoryMoveRobot(CategoryPreprocess):
         elif deletion_comment == self.DELETION_COMMENT_SAME_AS_EDIT_COMMENT:
             # Use the edit comment as the deletion comment.
             self.deletion_comment = self.comment
+        elif self.newcat:
+            # Category is moved.
+            self.deletion_comment = i18n.twtranslate(self.site,
+                                                     'category-was-moved',
+                                                     template_vars)
         else:
-            # Deletion comment is set to internationalized default.
-            if self.newcat:
-                # Category is moved.
-                self.deletion_comment = i18n.twtranslate(self.site,
-                                                         'category-was-moved',
-                                                         template_vars)
-            else:
-                # Category is deleted.
-                self.deletion_comment = i18n.twtranslate(
-                    self.site, 'category-was-disbanded')
+            # Category is deleted.
+            self.deletion_comment = i18n.twtranslate(
+                self.site, 'category-was-disbanded')
         self.move_comment = move_comment if move_comment else self.comment
 
     def run(self) -> None:
@@ -844,7 +838,7 @@ class CategoryMoveRobot(CategoryPreprocess):
                                              in_place=self.inplace,
                                              include=self.includeonly,
                                              sort_key=self.keep_sortkey)
-                    self.counter[count_key + ' talk'] += 1
+                    self.counter[f'{count_key} talk'] += 1
 
     @staticmethod
     def check_move(name: str, old_page, new_page) -> bool:
@@ -860,15 +854,15 @@ class CategoryMoveRobot(CategoryPreprocess):
         """
         move_possible = True
         if new_page and new_page.exists():
-            pywikibot.warning("The {} target '{}' already exists."
-                              .format(name, new_page.title()))
+            pywikibot.warning(f"The {name} target '{new_page.title()}' already exists.")
             move_possible = False
         if not old_page.exists():
             # only warn if not a talk page
             log = (pywikibot.log if old_page.namespace() % 2 else
                    pywikibot.warning)
-            log("Moving {} '{}' requested, but the page doesn't exist."
-                .format(name, old_page.title()))
+            log(
+                f"Moving {name} '{old_page.title()}' requested, but the page doesn't exist."
+            )
             move_possible = False
         return move_possible
 
@@ -883,8 +877,9 @@ class CategoryMoveRobot(CategoryPreprocess):
         Do not use this function from outside the class.
         """
         # Some preparing
-        pywikibot.info('Moving text from {} to {}.'.format(
-            self.oldcat.title(), self.newcat.title()))
+        pywikibot.info(
+            f'Moving text from {self.oldcat.title()} to {self.newcat.title()}.'
+        )
         comma = self.site.mediawiki_message('comma-separator')
         authors = comma.join(self.oldcat.contributors().keys())
         template_vars = {'oldcat': self.oldcat.title(), 'authors': authors}
@@ -1005,7 +1000,7 @@ class CategoryListifyRobot:
 
     def run(self) -> None:
         """Start bot."""
-        if self.list.exists() and not (self.append or self.overwrite):
+        if self.list.exists() and not self.append and not self.overwrite:
             pywikibot.info(
                 f'Page {self.list.title()} already exists, aborting.\n')
             pywikibot.info(fill(
@@ -1101,6 +1096,8 @@ class CategoryTidyRobot(Bot, CategoryPreprocess):
         :param original_cat: original category to replace.
         :param current_cat: a category which is questioned.
         """
+
+
         class CatContextOption(ContextOption):
             """An option to show more and more context and categories."""
 
@@ -1109,7 +1106,7 @@ class CategoryTidyRobot(Bot, CategoryPreprocess):
                 """Create a section and categories from the text."""
                 start = max(0, self.start - self.context)
                 end = min(len(self.text), self.end + self.context)
-                text = self.text[start:end] + '...'
+                text = f'{self.text[start:end]}...'
 
                 # if categories weren't visible, show them additionally
                 if len(self.text) > end:
@@ -1121,6 +1118,7 @@ class CategoryTidyRobot(Bot, CategoryPreprocess):
                                 current_cat.title(as_link=True))
                         text += '\n'
                 return text
+
 
         class CatIntegerOption(IntegerOption):
             """An option allowing a range of integers."""
@@ -1233,8 +1231,10 @@ class CategoryTidyRobot(Bot, CategoryPreprocess):
                    context_option,
                    StandardOption('jump to custom category', 'j'))
         choice = pywikibot.input_choice(
-            'Choice for page <<lightpurple>>{}<<default>>:'
-            .format(member.title()), options, default='c')
+            f'Choice for page <<lightpurple>>{member.title()}<<default>>:',
+            options,
+            default='c',
+        )
 
         if choice == 'c':
             pywikibot.info(f'Saving page to {current_cat.title()}')
@@ -1396,7 +1396,7 @@ class CategoryTreeRobot:
         tree = self.treeview(cat)
         pywikibot.info()
         if self.filename:
-            pywikibot.info('Saving results in ' + self.filename)
+            pywikibot.info(f'Saving results in {self.filename}')
             with codecs.open(self.filename, 'a', 'utf-8') as f:
                 f.write(tree)
         else:

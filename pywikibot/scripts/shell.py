@@ -44,8 +44,7 @@ def main(*args: str) -> None:
         warn_type = 'Unknown'
 
     if args:
-        print('{} arguments: {}\n'  # noqa: T001, T201
-              .format(warn_type, ', '.join(args)))
+        print(f"{warn_type} arguments: {', '.join(args)}\n")
 
     # Various stuffs in Python 3.4+, such as history file.
     # This is defined in the site module of the Python Standard Library,

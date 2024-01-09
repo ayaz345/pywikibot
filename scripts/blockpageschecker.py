@@ -227,7 +227,7 @@ class CheckerBot(ConfigParserBot, ExistingPageBot, SingleSiteBot):
         if not key:
             return
 
-        summary = i18n.twtranslate(self.site, 'blockpageschecker-' + key)
+        summary = i18n.twtranslate(self.site, f'blockpageschecker-{key}')
         self.userPut(page, page.text, newtext, summary=summary)
 
     def skip_page(self, page):
@@ -328,13 +328,13 @@ class CheckerBot(ConfigParserBot, ExistingPageBot, SingleSiteBot):
                 msg = 'The page is editable for all'
                 if not self.opt.move:
                     msg += ', deleting the template..'
-                pywikibot.info(msg + '.')
+                pywikibot.info(f'{msg}.')
                 msg_type = 'deleting'
 
             elif edit_restriction[0] == 'sysop':
                 # total edit protection
                 if template_in_page.blocktype == 'sysop-total' and ttp \
-                   or template_in_page.blocktype == 'unique' and tu:
+                       or template_in_page.blocktype == 'unique' and tu:
                     msg = 'The page is protected to the sysop'
                     if not self.opt.move:
                         msg += ', skipping...'
@@ -400,7 +400,7 @@ class CheckerBot(ConfigParserBot, ExistingPageBot, SingleSiteBot):
                 elif move_restriction[0] == 'sysop':
                     # move-total-protection
                     if template_in_page.blocktype == 'sysop-move' and ttmp \
-                       or template_in_page.blocktype == 'unique' and tu:
+                           or template_in_page.blocktype == 'unique' and tu:
                         pywikibot.info('The page is protected from moving to '
                                        'the sysop, skipping...')
                         if tu:
